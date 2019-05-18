@@ -28,7 +28,6 @@ import utils.Utils;
 public class ChordController implements Runnable {
 
 	private static final int M = 32; // 32bits - 4 bytes
-	private static final int NEXT_PEERS_MAX_SIZE = 5;
 	private static final String ENCRYPTION_ALGORITHM = "md5";
 	private static final TimeUnit DEFAULT_TIMEUNIT = TimeUnit.MILLISECONDS;
 
@@ -44,9 +43,6 @@ public class ChordController implements Runnable {
 	private AbstractPeerInfo predecessor;
 
 	private Deque<PeerInfo> nextPeers; // this is an enhancement to the protocol
-
-	private String message_ask;
-	private String message_successor;
 
 	public ChordController(Integer port) {
 		nextPeers = new ConcurrentLinkedDeque<PeerInfo>();

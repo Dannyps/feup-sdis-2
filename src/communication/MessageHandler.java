@@ -32,7 +32,6 @@ import utils.Utils;
 
 public class MessageHandler implements Runnable {
 
-	private Connection dbConnection;
 	private SSLSocket socket;
 	private String myPeerID;
 	private Peer peer;
