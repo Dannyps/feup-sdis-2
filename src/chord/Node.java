@@ -94,8 +94,7 @@ public class Node {
             Object o = ois.readObject();
             System.out.println(o.getClass());
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Failed opening connection.", e);
+            throw new RuntimeException("Failed to read message.", e);
         }
 
     }
