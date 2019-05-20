@@ -1,9 +1,8 @@
 package chord;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
-import java.net.InetAddress;
+import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -12,6 +11,9 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+
+import utils.ConsoleColours;
+import utils.PrintMessage;
 
 public class Node {
     private static final short SOCKET_TIMEOUT = 5000;
@@ -27,7 +29,22 @@ public class Node {
         this.myAddress = myId;
         this.key = new ChordKey(this);
         this.socket = createSocket(myId);
+        if (peer != null) {
+            join(peer);
+            // this.write(peer, myId);
+        }
         this.read();
+    }
+
+    private void join(InetSocketAddress peer) {
+        // new messsage join bla...
+        try {
+            write(peer, new Object()); // messageJoin
+        } catch (Exception e) {
+            PrintMessage.e("Error", "The specified peer is not reachable.");
+            e.printStackTrace();
+            System.exit(5);
+        } 
     }
 
     public Node(InetSocketAddress myId) {
@@ -74,7 +91,7 @@ public class Node {
 
         try {
             sslServerSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(port);
-            sslServerSocket.setEnabledCipherSuites(sslServerSocket.getSupportedCipherSuites());/**/
+            sslServerSocket.setEnabledCipherSuites(sslServerSocket.getSupportedCipherSuites());
 
         } catch (IOException e) {
             throw new RuntimeException("Failed opening port " + port + ".", e);
@@ -86,17 +103,39 @@ public class Node {
     }
 
     public void read() {
-        final SSLSocket ssls;
+        SSLSocket ssls;
+        while (true) {
+            try { // waiting for connections
+                ssls = (SSLSocket) this.socket.accept();
+                ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
+                Object o = ois.readObject();
+                System.out.println(o.getClass());
+            } catch (IOException | ClassNotFoundException e) {
+                PrintMessage.e("Error", e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
 
-        try { // block waiting for connections
-            ssls = (SSLSocket) this.socket.accept();
-            ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
-            Object o = ois.readObject();
-            System.out.println(o.getClass());
-        } catch (IOException | ClassNotFoundException e) {
-            throw new RuntimeException("Failed to read message.", e);
+    public void write(InetSocketAddress peer, Object o) throws Exception {
+        SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+        SSLSocket sslSocket = null;
+
+        try {
+            sslSocket = (SSLSocket) sslSocketFactory.createSocket(peer.getAddress(), peer.getPort());
+        } catch (IOException e) {
+            throw new Exception(e);
+        }
+
+        sslSocket.setEnabledCipherSuites(sslSocket.getSupportedCipherSuites());
+
+        try {
+            ObjectOutputStream output = new ObjectOutputStream(sslSocket.getOutputStream());
+            output.writeObject(o);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
 
     }
-
 }

@@ -11,39 +11,43 @@ import java.util.concurrent.ExecutionException;
 
 import chord.Node;
 import utils.AddrPort;
+import utils.PrintMessage;
 
 public class Init {
 
 	private static final int PORT = 7654;
 
 	public static void main(String[] argv) throws UnknownHostException, InterruptedException, ExecutionException {
-
+		PrintMessage.printMessages = true;
 		// an alternative to System.out.
 		PrintStream info = new PrintStream(System.out);
 
 		InetSocketAddress mySocket = null;
 
-		Node me = null;
 		if (argv.length == 0) {
 			// No m was provided
-			info.println("Please provide a port. Usage: java service.Init <port> [peer_ip:peer_port]");
+			PrintMessage.i("Info", "Please provide a port. Usage: java service.Init <port> [peer_ip:peer_port]");
 			System.exit(1);
-		} else if (argv.length == 1) {
-			// I am the first node. I must begin chord.
-			info.println("Creating a chord network.");
-			mySocket = new InetSocketAddress(getOwnAddress(), Integer.parseInt(argv[0]));
-			info.println("Peers may connect to this chord network by using "
-					+ mySocket.getAddress().toString().substring(1) + ":" + mySocket.getPort() + " as peer.");
-			me = new Node(mySocket);
 		} else {
-			// I got an IP address. I must connect to it and join their chord.
-			try {
-				AddrPort peer = new AddrPort(argv[1]);
-				me = new Node(mySocket, peer.getInetSocketAddress());
-			} catch (Exception e) {
-				info.println("The passed address is not valid.");
-				System.exit(2);
-				e.printStackTrace();
+			mySocket = new InetSocketAddress(getOwnAddress(), Integer.parseInt(argv[0]));
+			if (argv.length == 1) {
+				// I am the first node. I must begin chord.
+				PrintMessage.i("Info", "Creating a chord network.");
+
+				PrintMessage.i("Info", "Peers may connect to this chord network by using "
+						+ mySocket.getAddress().toString().substring(1) + ":" + mySocket.getPort() + " as peer.");
+				new Node(mySocket);
+			} else {
+				// I got an IP address. I must connect to it and join their chord.
+				PrintMessage.i("Info", "Joining the specified chord network.");
+				try {
+					AddrPort peer = new AddrPort(argv[1]);
+					new Node(mySocket, peer.getInetSocketAddress());
+				} catch (Exception e) {
+					info.println("The passed address is not valid.");
+					e.printStackTrace();
+					System.exit(2);
+				}
 			}
 		}
 	}
