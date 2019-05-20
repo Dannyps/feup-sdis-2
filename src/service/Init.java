@@ -7,48 +7,44 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import chord.Node;
+import utils.AddrPort;
 
 public class Init {
 
 	private static final int PORT = 7654;
 
 	public static void main(String[] argv) throws UnknownHostException, InterruptedException, ExecutionException {
-		
-		
+
 		// an alternative to System.out.
 		PrintStream info = new PrintStream(System.out);
-		
-		InetSocketAddress mySocket = new InetSocketAddress(getOwnAddress(), PORT);
-		info.println(mySocket);
-		
-		
+
+		InetSocketAddress mySocket = null;
+
 		Node me = null;
 		if (argv.length == 0) {
 			// No m was provided
-			info.println("Please provide an m for chord. Usage: java Chord <m>");
+			info.println("Please provide a port. Usage: java service.Init <port> [peer_ip:peer_port]");
 			System.exit(1);
 		} else if (argv.length == 1) {
 			// I am the first node. I must begin chord.
-			info.println("Creating a chord network with m = " + argv[0] + ".");
-			me = new Node(Integer.parseInt(argv[0]), mySocket);
+			info.println("Creating a chord network.");
+			mySocket = new InetSocketAddress(getOwnAddress(), Integer.parseInt(argv[0]));
+			info.println("Peers may connect to this chord network by using "
+					+ mySocket.getAddress().toString().substring(1) + ":" + mySocket.getPort() + " as peer.");
+			me = new Node(mySocket);
 		} else {
 			// I got an IP address. I must connect to it and join their chord.
-			InetAddress toConnect = null;
 			try {
-				toConnect = InetAddress.getByName(argv[1]);
-			} catch (UnknownHostException e) {
+				AddrPort peer = new AddrPort(argv[1]);
+				me = new Node(mySocket, peer.getInetSocketAddress());
+			} catch (Exception e) {
 				info.println("The passed address is not valid.");
 				System.exit(2);
 				e.printStackTrace();
 			}
-
-			InetSocketAddress PeerSocket = new InetSocketAddress(toConnect, PORT);
-			me = new Node(Integer.parseInt(argv[0]), mySocket, PeerSocket);
-
 		}
 	}
 

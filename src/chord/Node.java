@@ -1,32 +1,37 @@
 package chord;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-public class Node{
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
+public class Node {
+    private static final short SOCKET_TIMEOUT = 5000;
+
     ChordKey key;
     InetSocketAddress myAddress;
 
-
     AtomicReferenceArray<InetSocketAddress> fingerTable = new AtomicReferenceArray<InetSocketAddress>(32);
 
-    /**
-     * Join peer's chord net
-     * @param size
-     * @param peer
-     */
-    public Node(int size, InetSocketAddress myId, InetSocketAddress peer){
+    private SSLServerSocket socket;
+
+    public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
         this.key = new ChordKey(this);
-        System.out.println(this.key);
+        this.socket = createSocket(myId);
+        this.read();
     }
 
-    /**
-     * Create a chord net
-     * @param size
-     */
-    public Node(int size, InetSocketAddress myId){
-        this(size, myId, null);
+    public Node(InetSocketAddress myId) {
+        this(myId, null);
     }
 
     /**
@@ -40,7 +45,6 @@ public class Node{
      * @return the myAddress
      */
     public InetSocketAddress getAddress() {
-        System.out.println(myAddress);
         return myAddress;
     }
 
@@ -60,6 +64,40 @@ public class Node{
     public InetSocketAddress getSuccessor() {
         // TODO
         return null;
+    }
+
+    private static SSLServerSocket createSocket(InetSocketAddress myId) {
+        int port = myId.getPort();
+
+        SSLServerSocketFactory sslServerSocketFactory = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
+        SSLServerSocket sslServerSocket;
+
+        try {
+            sslServerSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(port);
+            sslServerSocket.setEnabledCipherSuites(sslServerSocket.getSupportedCipherSuites());/**/
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed opening port " + port + ".", e);
+        }
+
+        sslServerSocket.setNeedClientAuth(true);
+
+        return sslServerSocket;
+    }
+
+    public void read() {
+        final SSLSocket ssls;
+
+        try { // block waiting for connections
+            ssls = (SSLSocket) this.socket.accept();
+            ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
+            Object o = ois.readObject();
+            System.out.println(o.getClass());
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed opening connection.", e);
+        }
+
     }
 
 }
