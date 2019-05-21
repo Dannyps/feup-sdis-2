@@ -14,7 +14,8 @@ public class AddrPort {
     }
 
     public AddrPort(String pair) throws Exception {
-        String[] n = pair.split(":");
+        int i = pair.lastIndexOf(":");
+        String[] n = {pair.substring(0, i), pair.substring(i+1)};
 
         if (n.length == 2) {
             address = n[0];
