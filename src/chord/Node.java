@@ -12,6 +12,8 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import message.Message;
+import message.MessageType;
 import utils.ConsoleColours;
 import utils.PrintMessage;
 
@@ -39,7 +41,7 @@ public class Node {
     private void join(InetSocketAddress peer) {
         // new messsage join bla...
         try {
-            write(peer, new Object()); // messageJoin
+            write(peer, new Message<String>(MessageType.CHORD_JOIN)); // messageJoin
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();

@@ -6,5 +6,6 @@ public enum MessageType {
     FILE_DELETE,
     NODE_SUCCESSOR,
     NODE_PREDECESSOR,
-    LOOKUP_FILE
+    LOOKUP_FILE,
+    CHORD_JOIN
 }

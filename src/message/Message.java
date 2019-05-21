@@ -1,6 +1,6 @@
 package message;
 
-import java.awt.TrayIcon.MessageType;
+import message.MessageType;
 import java.io.Serializable;
 
 public class Message<T extends Serializable> implements Serializable {
@@ -14,16 +14,20 @@ public class Message<T extends Serializable> implements Serializable {
     /**
      * The data to be sent on the message
      */
-    private T content = null;
+    private T arg = null;
 
     /**
      * Constructs a new serializable message
      * @param msgType
-     * @param content
+     * @param arg
      */
-    Message(MessageType msgType, T content) {
+    public Message(MessageType msgType, T content) {
         this.msgType = msgType;
-        this.content = content;
+        this.arg = content;
+    }
+
+    public Message(MessageType msgType) {
+        this(msgType, null);
     }
 
 }
