@@ -15,8 +15,6 @@ import utils.PrintMessage;
 
 public class Init {
 
-	private static final int PORT = 7654;
-
 	public static void main(String[] argv) throws UnknownHostException, InterruptedException, ExecutionException {
 		PrintMessage.printMessages = true;
 		// an alternative to System.out.
