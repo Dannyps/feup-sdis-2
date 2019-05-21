@@ -42,7 +42,8 @@ public class Node {
 
     private void join(InetSocketAddress peer) {
         try {
-            write(peer, new Message<>(MessageType.CHORD_JOIN)); // messageJoin
+            Message<Integer> message = new Message<Integer>(MessageType.CHORD_JOIN, myAddress.getPort());
+            write(peer, message); // messageJoin
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -114,8 +115,9 @@ public class Node {
                 ssls = (SSLSocket) this.socket.accept();
                 SocketAddress addr = ssls.getRemoteSocketAddress();
                 ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
-                Object o = ois.readObject();
-                takeCareOfMessage((Message) o, addr);
+                Message o = (Message) ois.readObject();
+                o.setRealSource((InetSocketAddress) addr);
+                takeCareOfMessage( o);
             } catch (IOException | ClassNotFoundException e) {
                 PrintMessage.e("Error", e.getMessage());
                 e.printStackTrace();
@@ -124,8 +126,10 @@ public class Node {
     }
 
     @SuppressWarnings("rawtypes")
-    private void takeCareOfMessage(Message o, SocketAddress addr) {
-        PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + addr.toString() + ".");
+    private void takeCareOfMessage(Message o) {
+        //Message m = Message.handleMessage(o);
+        PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + o.getSource() + ".");
+
     }
 
     public void write(InetSocketAddress peer, Object o) throws Exception {
@@ -142,6 +146,8 @@ public class Node {
 
         try {
             ObjectOutputStream output = new ObjectOutputStream(sslSocket.getOutputStream());
+            ((Message<?>) o).setSource(this.myAddress);
+            ((Message<?>) o).setDestination(peer);
             output.writeObject(o);
         } catch (IOException e) {
             // TODO Auto-generated catch block
