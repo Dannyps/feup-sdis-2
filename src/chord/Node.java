@@ -3,10 +3,10 @@ package chord;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import javax.net.ssl.SSLServerSocket;
@@ -16,21 +16,24 @@ import javax.net.ssl.SSLSocketFactory;
 
 import message.Message;
 import message.MessageType;
-import utils.ConsoleColours;
 import utils.PrintMessage;
 
 public class Node {
     public final int m = 8;
     ChordKey key;
-    InetSocketAddress myAddress;
-
-    AtomicReferenceArray<InetSocketAddress> fingerTable = new AtomicReferenceArray<InetSocketAddress>(32);
+    private InetSocketAddress myAddress = null;
+    private InetSocketAddress successor = null;
+    private InetSocketAddress predecessor = null;
 
     private SSLServerSocket socket;
+    private AtomicReferenceArray<InetSocketAddress> fingerTable;
+    private ConcurrentHashMap<InetSocketAddress, Serializable> data;
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
         this.key = new ChordKey(this);
+        this.fingerTable = new AtomicReferenceArray<>(m);
+        this.data = new ConcurrentHashMap<>();
 
         this.socket = createSocket(myId);
         if (peer != null) {
@@ -40,10 +43,48 @@ public class Node {
         this.read();
     }
 
+    /**
+     * Obtains the nth node in the local finger table
+     */
+    public InetSocketAddress getNthFinger(int n) {
+        return fingerTable.get(n);
+    }
+
+    /**
+     * Sets the nth node in the local finger table
+     */
+    public void setNthFinger(int n, InetSocketAddress address) {
+        PrintMessage.w("Chord", "Setting finger at i=" + n + " -> " + address);
+        // if (n == 0) // successor
+        // this.notify(address);
+        fingerTable.set(n, address);
+    }
+
+    /**
+     * Notifies the immediate successor, informing that this is its (alive)
+     * predecessor
+     */
+    public boolean notify(InetSocketAddress successor) {
+        PrintMessage.w("Chord", "Notifying " + successor + ".");
+        if (successor.equals(this.getAddress())) {
+            PrintMessage.w("Chord", "Notifying self. Successor not set.");
+            return false;
+        }
+
+        /*
+         * Message<Serializable> notification =
+         * Message.makeRequest(Message.Type.AM_YOUR_PREDECESSOR, getAddress(),
+         * getAddress()); Message response = dispatcher.sendRequest(successor,
+         * notification); return response.getType() == Message.Type.OK;
+         */
+        return false;
+    }
+
     private void join(InetSocketAddress peer) {
         try {
             Message<Integer> message = new Message<Integer>(MessageType.CHORD_JOIN, myAddress.getPort());
-            write(peer, message); // messageJoin
+            Message<ChordKey> response = (Message<ChordKey>) write(peer, message, true); // messageJoin
+            PrintMessage.w("Response", response.getArg().toString());
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -117,7 +158,12 @@ public class Node {
                 ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
                 Message o = (Message) ois.readObject();
                 o.setRealSource((InetSocketAddress) addr);
-                takeCareOfMessage( o);
+                Message res = takeCareOfMessage(o);
+                if (o.shouldSendResponse()) {
+                    ObjectOutputStream out = new ObjectOutputStream(ssls.getOutputStream());
+                    out.writeObject(res);
+                }
+                ssls.close();
             } catch (IOException | ClassNotFoundException e) {
                 PrintMessage.e("Error", e.getMessage());
                 e.printStackTrace();
@@ -126,13 +172,38 @@ public class Node {
     }
 
     @SuppressWarnings("rawtypes")
-    private void takeCareOfMessage(Message o) {
-        //Message m = Message.handleMessage(o);
+    private Message takeCareOfMessage(Message o) {
+
+        try {
+
+            switch (o.getMsgType()) {
+            case CHORD_JOIN:
+                return handleJoin(o);
+            default:
+                break;
+            }
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
+
         PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + o.getSource() + ".");
+        return null;
 
     }
 
-    public void write(InetSocketAddress peer, Object o) throws Exception {
+    private Message<ChordKey> handleJoin(Message<?> o) {
+        Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_ACK, this.getKey());
+        return m;
+    }
+
+    /**
+     * 
+     * @param peer     the destination peer
+     * @param o        the object to send (usually a message)
+     * @param response wether a response should be caught from the peer
+     * @throws Exception
+     */
+    public Message<?> write(InetSocketAddress peer, Object o, boolean response) throws Exception {
         SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
         SSLSocket sslSocket = null;
 
@@ -148,10 +219,21 @@ public class Node {
             ObjectOutputStream output = new ObjectOutputStream(sslSocket.getOutputStream());
             ((Message<?>) o).setSource(this.myAddress);
             ((Message<?>) o).setDestination(peer);
+            if(response) ((Message<?>) o).expectsResponse();
             output.writeObject(o);
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+        }
+
+        if (!response) {
+            return null;
+        } else {
+            // we must wait for a response on this socket.
+            ObjectInputStream input = new ObjectInputStream(sslSocket.getInputStream());
+            Message<?> o1 = (Message<?>) input.readObject();
+            sslSocket.close();
+            return o1;
         }
 
     }

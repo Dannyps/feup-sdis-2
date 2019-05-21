@@ -1,5 +1,6 @@
 package chord;
 
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.security.MessageDigest;
@@ -10,8 +11,9 @@ import utils.PrintMessage;
 /**
  * ChordKey
  */
-public class ChordKey {
+public class ChordKey implements Serializable {
 
+    private static final long serialVersionUID = -281700698440823064L;
     private int key;
 
     public ChordKey(Node node) {

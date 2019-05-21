@@ -7,5 +7,6 @@ public enum MessageType {
     NODE_SUCCESSOR,
     NODE_PREDECESSOR,
     LOOKUP_FILE,
-    CHORD_JOIN
+    CHORD_JOIN,
+    CHORD_ACK
 }

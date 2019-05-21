@@ -17,7 +17,25 @@ public class Message<T extends Serializable> implements Serializable {
      */
     private T arg = null;
 
-    private InetSocketAddress source, destination, realSource;
+    /**
+     * filled by the sender contains the port to where responses should be sent.
+     */
+    private InetSocketAddress source = null;
+
+    /**
+     * filled by the sender
+     */
+    private InetSocketAddress destination = null;
+
+    /**
+     * filled by the receiver
+     */
+    private InetSocketAddress realSource = null;
+
+    /**
+     * wether the sender expects a response
+     */
+    private boolean response = false;
 
     /**
      * Constructs a new serializable message
@@ -41,15 +59,6 @@ public class Message<T extends Serializable> implements Serializable {
         return msgType;
     }
 
-    public static Message handleMessage(Message o) {
-        switch (o.getMsgType()) {
-        case CHORD_JOIN:
-            return (Message<Integer>) o;
-        default:
-            break;
-        }
-        return null;
-    }
 
     /**
      * @return the arg
@@ -105,5 +114,37 @@ public class Message<T extends Serializable> implements Serializable {
      */
     public void setDestination(InetSocketAddress destination) {
         this.destination = destination;
+    }
+
+    public InetSocketAddress getReplyTo() {
+        if (realSource != null && source != null) {
+            if (this.shouldSendResponse()) { // a socket on the other end is waiting for us.
+                return realSource;
+            } else { // a new connection must be opened to send this response (should not happen)
+                return new InetSocketAddress(realSource.getAddress(), source.getPort());
+            }
+        } else
+            return null;
+    }
+
+    /**
+     * @return wether this message should return a response (on the same socket)
+     */
+    public boolean shouldSendResponse() {
+        return this.response;
+    }
+
+    /**
+     * sets this message as expecting a response
+     */
+    public void expectsResponse() {
+        this.response = true;
+    }
+
+    /**
+     * sets this message as not expecting a response
+     */
+    public void doesNotExpectResponse() {
+        this.response = false;
     }
 }
