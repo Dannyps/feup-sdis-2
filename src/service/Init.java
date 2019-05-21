@@ -19,7 +19,7 @@ public class Init {
 		PrintMessage.printMessages = true;
 		// an alternative to System.out.
 		PrintStream info = new PrintStream(System.out);
-
+		PrintMessage.i("Info", "Initiating... ");
 		InetSocketAddress mySocket = null;
 
 		if (argv.length == 0) {
@@ -59,9 +59,9 @@ public class Init {
 		InetAddress mcastaddr;
 		try {
 			mcastaddr = InetAddress.getByName("225.0.0.0");
-			MulticastSocket multicastSocket = new MulticastSocket(8546);
+			MulticastSocket multicastSocket = new MulticastSocket(15432);
 			multicastSocket.joinGroup(mcastaddr);
-			multicastSocket.send(new DatagramPacket(new byte[1], 1, mcastaddr, 8546));
+			multicastSocket.send(new DatagramPacket(new byte[1], 1, mcastaddr, 15432));
 
 			DatagramPacket packet = new DatagramPacket(new byte[1], 1);
 
@@ -74,7 +74,8 @@ public class Init {
 			multicastSocket.close();
 			return packet.getAddress();
 		} catch (Exception e1) {
-			System.err.print("Couldn't get own address!");
+			PrintMessage.e("FATAL", "Couldn't get own address!");
+			e1.printStackTrace();
 			System.exit(-3);
 			return null;
 		}
