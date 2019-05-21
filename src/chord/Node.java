@@ -46,7 +46,8 @@ public class Node {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
             System.exit(5);
-        } 
+        }
+        PrintMessage.s("Join", "Join message sent successfully.");
     }
 
     public Node(InetSocketAddress myId) {

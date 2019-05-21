@@ -6,6 +6,7 @@ package utils;
 public class PrintMessage {
 
     public static boolean printMessages = false;
+    public static boolean printWarnings = false;
 
     // public static void p(String action, Message m) {
     // PrintMessage.p(action, m.toString(), ConsoleColours.BLUE_BOLD,
@@ -14,6 +15,7 @@ public class PrintMessage {
 
     /**
      * print info
+     * 
      * @param action
      * @param m
      */
@@ -23,11 +25,33 @@ public class PrintMessage {
 
     /**
      * print error
+     * 
      * @param action
      * @param m
      */
     public static void e(String action, String m) {
         PrintMessage.p(action, m, ConsoleColours.RED_BOLD_BRIGHT, ConsoleColours.RED);
+    }
+
+    /**
+     * print success
+     * 
+     * @param action
+     * @param m
+     */
+    public static void s(String action, String m) {
+        PrintMessage.p(action, m, ConsoleColours.GREEN_BOLD_BRIGHT, ConsoleColours.GREEN);
+    }
+
+    /**
+     * print warning
+     * 
+     * @param action
+     * @param m
+     */
+    public static void w(String action, String m) {
+        if (printWarnings)
+            PrintMessage.p(action, m, ConsoleColours.YELLOW_BOLD_BRIGHT, ConsoleColours.YELLOW);
     }
 
     public static void p(String action, String m, String accentColor, String msgColor) {

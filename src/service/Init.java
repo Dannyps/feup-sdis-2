@@ -17,6 +17,7 @@ public class Init {
 
 	public static void main(String[] argv) throws UnknownHostException, InterruptedException, ExecutionException {
 		PrintMessage.printMessages = true;
+		PrintMessage.printWarnings = true;
 		// an alternative to System.out.
 		PrintStream info = new PrintStream(System.out);
 		PrintMessage.i("Info", "Initiating... ");
