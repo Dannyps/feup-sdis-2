@@ -30,4 +30,11 @@ public class Message<T extends Serializable> implements Serializable {
         this(msgType, null);
     }
 
+    /**
+     * @return the msgType
+     */
+    public MessageType getMsgType() {
+        return msgType;
+    }
+
 }

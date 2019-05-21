@@ -5,6 +5,8 @@ import java.net.Inet4Address;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import utils.PrintMessage;
+
 /**
  * ChordKey
  */
@@ -18,6 +20,9 @@ public class ChordKey {
         int intIP = ip.hashCode();
         BigInteger data = BigInteger.valueOf(intIP * port);
         this.key = hashData(data.toByteArray()).hashCode();
+        this.key = Integer.max(this.key, -this.key);
+        this.key %= Math.pow(2, node.m);
+        PrintMessage.w("KEY", Integer.toString(this.key));
     }
 
     private static String hashData(byte[] data) {
@@ -42,7 +47,7 @@ public class ChordKey {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return Integer.toString(this.key);
     }
 

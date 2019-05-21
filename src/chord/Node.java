@@ -3,8 +3,10 @@ package chord;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import javax.net.ssl.SSLServerSocket;
@@ -18,8 +20,7 @@ import utils.ConsoleColours;
 import utils.PrintMessage;
 
 public class Node {
-    private static final short SOCKET_TIMEOUT = 5000;
-
+    public final int m = 8;
     ChordKey key;
     InetSocketAddress myAddress;
 
@@ -30,6 +31,7 @@ public class Node {
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
         this.key = new ChordKey(this);
+
         this.socket = createSocket(myId);
         if (peer != null) {
             join(peer);
@@ -39,9 +41,8 @@ public class Node {
     }
 
     private void join(InetSocketAddress peer) {
-        // new messsage join bla...
         try {
-            write(peer, new Message<String>(MessageType.CHORD_JOIN)); // messageJoin
+            write(peer, new Message<>(MessageType.CHORD_JOIN)); // messageJoin
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -105,19 +106,26 @@ public class Node {
         return sslServerSocket;
     }
 
+    @SuppressWarnings("rawtypes")
     public void read() {
         SSLSocket ssls;
         while (true) {
             try { // waiting for connections
                 ssls = (SSLSocket) this.socket.accept();
+                SocketAddress addr = ssls.getRemoteSocketAddress();
                 ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
                 Object o = ois.readObject();
-                System.out.println(o.getClass());
+                takeCareOfMessage((Message) o, addr);
             } catch (IOException | ClassNotFoundException e) {
                 PrintMessage.e("Error", e.getMessage());
                 e.printStackTrace();
             }
         }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private void takeCareOfMessage(Message o, SocketAddress addr) {
+        PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + addr.toString() + ".");
     }
 
     public void write(InetSocketAddress peer, Object o) throws Exception {
