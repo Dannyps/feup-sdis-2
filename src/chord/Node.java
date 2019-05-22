@@ -23,7 +23,7 @@ import message.KeyVal;
 import utils.PrintMessage;
 
 public class Node {
-    public final static int m = 8;
+    public final static int m = 16;
     ChordKey key;
     private InetSocketAddress myAddress = null;
     private InetSocketAddress successor = null;
@@ -262,7 +262,7 @@ public class Node {
     }
 
     private static boolean keyInBetween(int k, int a, int b) {
-        return (a > b && k > a) || a < k && k <= b;
+        return (a > b && (k > a || k < b)) || (a < k && k <= b);
     }
 
     private Message<?> handlePut(Message<KeyVal> o) {
