@@ -85,6 +85,8 @@ public class Node {
             Message<Integer> message = new Message<Integer>(MessageType.CHORD_JOIN, myAddress.getPort());
             Message<ChordKey> response = (Message<ChordKey>) write(peer, message, true); // messageJoin
             PrintMessage.w("Response", response.getArg().toString());
+            this.successor = response.getSource();
+            this.predecessor = response.getSource();
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -116,8 +118,7 @@ public class Node {
      * @return the predecessor
      */
     public InetSocketAddress getPredecessor() {
-        // TODO
-        return null;
+        return predecessor;
     }
 
     /**
@@ -125,8 +126,7 @@ public class Node {
      * @return the successor
      */
     public InetSocketAddress getSuccessor() {
-        // TODO
-        return null;
+        return successor;
     }
 
     private static SSLServerSocket createSocket(InetSocketAddress myId) {
@@ -161,6 +161,9 @@ public class Node {
                 Message res = takeCareOfMessage(o);
                 if (o.shouldSendResponse()) {
                     ObjectOutputStream out = new ObjectOutputStream(ssls.getOutputStream());
+                    res.doesNotExpectResponse();
+                    res.setDestination(res.getSource());
+                    res.setSource(this.myAddress);
                     out.writeObject(res);
                 }
                 ssls.close();
@@ -192,6 +195,11 @@ public class Node {
     }
 
     private Message<ChordKey> handleJoin(Message<?> o) {
+        if (this.successor == null && this.predecessor == null) {
+            // the joining node is the second one.
+            this.successor = o.getSource();
+            this.predecessor = o.getSource();
+        }
         Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_ACK, this.getKey());
         return m;
     }
@@ -219,7 +227,8 @@ public class Node {
             ObjectOutputStream output = new ObjectOutputStream(sslSocket.getOutputStream());
             ((Message<?>) o).setSource(this.myAddress);
             ((Message<?>) o).setDestination(peer);
-            if(response) ((Message<?>) o).expectsResponse();
+            if (response)
+                ((Message<?>) o).expectsResponse();
             output.writeObject(o);
         } catch (IOException e) {
             // TODO Auto-generated catch block
@@ -236,5 +245,15 @@ public class Node {
             return o1;
         }
 
+    }
+
+    public Object getObj(ChordKey k){
+        
+        
+        return new Object();
+    }
+
+    public boolean putObj(ChordKey k, Object o){
+        return false;
     }
 }

@@ -128,7 +128,7 @@ public class Message<T extends Serializable> implements Serializable {
     }
 
     /**
-     * @return wether this message should return a response (on the same socket)
+     * @return whether this message should return a response (on the same socket)
      */
     public boolean shouldSendResponse() {
         return this.response;
