@@ -16,6 +16,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import message.Message;
 import message.MessageType;
+import message.KeyVal;
 import utils.PrintMessage;
 
 public class Node {
@@ -38,6 +39,9 @@ public class Node {
         this.socket = createSocket(myId);
         if (peer != null) {
             join(peer);
+
+            TestClass test = new TestClass(3);
+            putObj(new ChordKey(test), test);
             // this.write(peer, myId);
         }
         this.read();
@@ -183,6 +187,8 @@ public class Node {
             switch (o.getMsgType()) {
             case CHORD_JOIN:
                 return handleJoin(o);
+            case CHORD_PUT:
+                return handlePut(o);
             default:
                 break;
             }
@@ -193,6 +199,14 @@ public class Node {
         PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + o.getSource() + ".");
         return null;
 
+    }
+
+    private Message<?> handlePut(Message<KeyVal> o) {
+        PrintMessage.w("Received PUT", "with arg: " + ((TestClass) o.getArg().getVal()).a);
+        PrintMessage.w("Data", "Internal data contains " + data.size() +" entries.");
+        boolean success = putObj(o.getArg().getKey(), (Serializable) o.getArg().getVal());
+        PrintMessage.w("Data", "Internal data contains " + data.size() +" entries.");
+        return new Message<Boolean>(MessageType.CHORD_ACK, success);
     }
 
     private Message<ChordKey> handleJoin(Message<?> o) {
@@ -248,33 +262,44 @@ public class Node {
 
     }
 
-    public Object getObj(ChordKey k){
+    public Object getObj(ChordKey k) {
         int kSucc = k.getSucc();
         int mySucc = this.key.getSucc();
         int predSucc = new ChordKey(this.predecessor).getSucc();
-        if(kSucc>predSucc && kSucc <=mySucc){
+        if (kSucc > predSucc && kSucc <= mySucc) {
             // I should have this object
             return this.data.get(k);
-        }else{
-            //TODO someone else has it
-            
+        } else {
+            // TODO someone else has it
+
         }
-        
+
         return new Object();
     }
 
-    public boolean putObj(ChordKey k, Serializable o){
-        int kSucc = k.getSucc();
-        int mySucc = this.key.getSucc();
-        int predSucc = new ChordKey(this.predecessor).getSucc();
-        if(kSucc>predSucc && kSucc <=mySucc){
-            // I should have this object
-            this.data.put(k, o);
+    public boolean putObj(ChordKey key, Serializable o) {
+        int k = key.getSucc();
+        int m = this.key.getSucc();
+        int a = new ChordKey(this.predecessor).getSucc();
+        PrintMessage.e("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
+        if (a>m && !(a<k) && k<=m) {
+            // I should store this object
+            PrintMessage.e("Put", "storing locally");
+            this.data.put(key, o);
             return true;
-        }else{
-            //TODO someone else has to store it
-            return false;   
-            
+        } else {
+            PrintMessage.e("Put", "storing remotly");
+            // TODO someone else has to store it
+            Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_PUT, new KeyVal(key, o));
+            try {
+                Message<Boolean> response =  (Message<Boolean>) write(this.successor, message, true);
+                return response.getArg();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            return false;
+
         }
     }
 }

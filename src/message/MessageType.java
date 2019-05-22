@@ -8,5 +8,7 @@ public enum MessageType {
     NODE_PREDECESSOR,
     LOOKUP_FILE,
     CHORD_JOIN,
-    CHORD_ACK
+    CHORD_ACK,
+    CHORD_LOOKUP,
+    CHORD_PUT
 }

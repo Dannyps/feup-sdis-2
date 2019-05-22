@@ -2,7 +2,6 @@ package chord;
 
 import java.io.Serializable;
 import java.math.BigInteger;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.MessageDigest;
@@ -19,17 +18,29 @@ public class ChordKey implements Serializable {
     private BigInteger key;
     private int succ; // where the object pertaining to this key should be stored
 
-    public ChordKey(InetSocketAddress node) {
-        InetAddress ip = node.getAddress();
-        int port = node.getPort();
+    public ChordKey(InetSocketAddress addr) {
+        InetAddress ip = addr.getAddress();
+        int port = addr.getPort();
         int intIP = ip.hashCode();
         BigInteger data = BigInteger.valueOf(intIP * port);
         this.key = hashData(data.toByteArray());
-        Integer a = (int) Math.pow(2, Node.m);
-        this.succ = this.key.abs().mod( BigInteger.valueOf(a.intValue())).intValue();
-        this.succ %= Math.pow(2, Node.m);
+        this.succ = calcSucc(this.key);
         PrintMessage.w("KEY", this.key.toString(0));
         PrintMessage.w("KEY", Integer.toString(this.succ));
+    }
+
+    private static int calcSucc(BigInteger k) {
+        int s;
+        Integer a = (int) Math.pow(2, Node.m);
+        s = k.abs().mod(BigInteger.valueOf(a.intValue())).intValue();
+        s %= Math.pow(2, Node.m);
+        return s;
+    }
+
+    public ChordKey(Object o){
+        this.key = hashData(BigInteger.valueOf(o.hashCode()).toByteArray());
+        this.succ=calcSucc(this.key);
+        
     }
 
     private static BigInteger hashData(byte[] data) {
