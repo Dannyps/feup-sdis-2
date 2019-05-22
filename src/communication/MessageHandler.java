@@ -15,13 +15,10 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.sql.Connection;
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import javax.net.ssl.SSLSocket;
 
-import data.BackupRequest;
+import chunks.Chunk;
+import controller.Controller;
 import peer.Peer;
 import utils.Confidentiality;
 import utils.Log;
@@ -29,6 +26,7 @@ import utils.Utils;
 
 public class MessageHandler implements Runnable {
 
+	private static final String DELIMITER = "\r\n";
 	private SSLSocket socket;
 	private String myPeerID;
 	private Peer peer;
@@ -65,27 +63,65 @@ public class MessageHandler implements Runnable {
 		s.append(request);
 		Log.LOGGER.finest(s.toString());
 
-		String[] firstLine = null, secondLine = null;
-		String thirdLine = null;
+		String[][] lines = parseMessageContent(request);
 
-		return executeMessage(firstLine, secondLine, thirdLine, request);
+		return executeMessage(lines[0], lines[1], lines[2][0], request);
 	}
 
+	private String[][] parseMessageContent(String request) {
+		String[] lines = request.split(DELIMITER);
+
+		String[] firstLine = lines[0].split(" "), secondLine = new String[] {};
+		String thirdLine = "";
+
+		if (lines.length > 2) {
+			thirdLine = request.substring(request.indexOf(DELIMITER + DELIMITER) + 4, request.length());
+		}
+
+		if (lines.length > 1) {
+			secondLine = lines[1].split(" ");
+		}
+
+		return new String[][] { firstLine, secondLine, new String[] { thirdLine } };
+	}
 
 	private String executeMessage(String[] firstLine, String[] secondLine, String thirdLine, String request) {
+		switch (MessageType.valueOf(firstLine[0])) {
+		case PUTCHUNK:
+			parsePutChunkMsg(secondLine, thirdLine);
+			break;
+		case STORED:
+			return parseStoredMsg(secondLine);
+		case INITDELETE:
+			parseInitDelete(firstLine, secondLine);
+			break;
+		case DELETE:
+			parseDelete(secondLine);
+			break;
+		case GETCHUNK:
+			return parseGetChunkMsg(secondLine);
+		case CHUNK:
+			return parseChunkMsg(secondLine, thirdLine);
+		default:
+			StringBuilder s = new StringBuilder("Unexpected message received: ");
+			s.append(request);
+			Log.LOGGER.warning(s.toString());
+			break;
+		}
 		return request;
 	}
 
 	private String parseChunkMsg(String[] secondLine, String body) {
 
-		BackupRequest b = null;// obter backup request de um chunk previamente guardado
+		Chunk chk = Controller.getInstance().getChunkController().getChunk(/*** chunkNo */
+				0, secondLine[0].trim());
 
-		Confidentiality c = new Confidentiality(b.getEncryptKey());
+		Confidentiality c = new Confidentiality(chk.getEncryptKey());
 
 		byte[] body_bytes = c.decrypt(body.getBytes(StandardCharsets.ISO_8859_1));
 
 		StringBuilder s = new StringBuilder("restoreFile-");
-		s.append(b.getFilename());
+		s.append(chk.getFileName());
 
 		Path filepath = Peer.getPath().resolve(s.toString());
 		if (!createFile(filepath))
@@ -102,6 +138,181 @@ public class MessageHandler implements Runnable {
 		src.flip();
 		channel.write(src, Integer.parseInt(secondLine[1]) * Utils.MAX_LENGTH_CHUNK, src, writter);
 
+		return null;
+	}
+
+	private void parseInitDelete(String[] firstLine, String[] secondLine) {
+		String fileToDelete = secondLine[0];
+		Controller c = Controller.getInstance();
+		int repDegree = c.getChunkController().getChunk(0, "").getDesiredRepDegree(); /*** colocar o ID */
+		deleteFile(fileToDelete, repDegree);
+	}
+
+	private String parseStoredMsg(String[] secondLine) {
+		InetAddress addr = createInetAddress(secondLine[0]);
+		if (addr == null)
+			return null;
+
+		/** confirmar ordem dos argumentos **/
+		Integer chunkNo = Integer.valueOf(secondLine[2]);
+		Integer port = Integer.valueOf(secondLine[1]);
+		String fileID = secondLine[2];
+
+		Controller c = Controller.getInstance();
+		// initiator peer -> register the stored message
+		if (c.getBackupController().increment(fileID, chunkNo))
+			return null;
+
+		// not initiator peer -> increases rep. count of the stored chunk, if has one
+		c.getChunkController().incrementReplicationCount(chunkNo, fileID);
+
+		return null;
+	}
+
+	private void parseDelete(String[] secondLine) {
+//		String fileToDelete = secondLine[0].trim();
+//		if (!DBUtils.amIResponsible(dbConnection, fileToDelete))
+//			deleteFile(fileToDelete, Integer.parseInt(secondLine[1]));
+	}
+
+	private void deleteFile(String fileToDelete, int repDegree) {
+//		StringBuilder s = new StringBuilder("Received Delete for file: ");
+//		s.append(fileToDelete);
+//		s.append(". Rep Degree: ");
+//		s.append(repDegree);
+//		System.out.println(s.toString());
+//
+//		boolean isFileStored = DBUtils.isFileStored(dbConnection, fileToDelete);
+//
+//		if (isFileStored) {
+//			for (ChunkInfo chunk : DBUtils.getAllChunksOfFile(dbConnection, fileToDelete)) {
+//				Utils.deleteFile(Peer.getPath().resolve(chunk.getFilename()));
+//				Peer.decreaseStorageUsed(chunk.getSize());
+//			}
+//
+//			DBUtils.deleteFile(dbConnection, fileToDelete);
+//			repDegree--;
+//			s.setLength(0);
+//			s.append("Deleted file: ");
+//			s.append(fileToDelete);
+//			Log.LOGGER.info(s.toString());
+//		}
+//
+//		if (repDegree > 0 || !isFileStored) {
+//			s.setLength(0);
+//			s.append("Forwarding delete to peer: ");
+//			s.append(peer.getChordManager().getSuccessor(0).getId());
+//
+//			System.out.println(s.toString());
+//			Client.sendMessage(peer.getChordManager().getSuccessor(0).getAddr(),
+//					peer.getChordManager().getSuccessor(0).getPort(),
+//					MessageFactory.getDelete(myPeerID, fileToDelete, repDegree), false);
+//
+//			s.setLength(0);
+//			s.append("Forwarded delete: ");
+//			s.append(fileToDelete);
+//			Log.LOGGER.info(s.toString());
+//		}
+
+	}
+
+	private void parsePutChunkMsg(String[] header, String body) {
+
+		InetAddress addr = createInetAddress(header[1]);
+
+		String fileID = header[3];
+		int chunkNo = Integer.parseInt(header[4]);
+
+		StringBuilder s = new StringBuilder(fileID);
+		s.append("_");
+		s.append(chunkNo);
+
+		Path filePath = Peer.getPath().resolve(s.toString());
+
+		String senderID = header[0].trim();
+		int port = Integer.parseInt(header[2].trim());
+//		DBUtils.insertPeer(dbConnection, peerThatRequestedBackup);
+
+		int replicationDegree = Integer.parseInt(header[5]);
+//		DBUtils.insertStoredFile(dbConnection, fileInfo);
+
+//		ChordController chordController = peer.getChordManager();
+		byte[] body_bytes = body.getBytes(StandardCharsets.ISO_8859_1);
+		String encryption_key = header[6];
+
+//		if (!myPeerID.equals(senderID)) {
+
+		Controller c = Controller.getInstance();
+		if (c.getBackupController().hasFile(fileID))
+			return;
+
+		if (!c.getChunkController().registerChunk(chunkNo, 0, replicationDegree, fileID, body_bytes, encryption_key,
+				""))
+			return;
+
+		if (!Peer.capacityExceeded(body_bytes.length)) { // tem espaco para fazer o backup
+			Log.LOGGER.info("Writing/Saving chunk");
+			if (!c.getChunkController().saveChunk(chunkNo, senderID))
+				writeToFile(filePath, body_bytes);
+
+			c.getChunkController().incrementReplicationCount(chunkNo, senderID);
+
+			if (replicationDegree != 1) {
+//				 enivar KEEPCHUNK para o sucessor
+//					Client.sendMessage(chordController.getSuccessor(0).getAddr(),
+//							chordController.getSuccessor(0).getPort(), MessageFactory.getKeepChunk(senderID, addr, port,
+//									fileID, chunkNo, replicationDegree - 1, body_bytes),
+//							false);
+
+			} else {// sou o ultimo a guardar
+				// enviar STORE ao que pediu o backup
+//				Client.sendMessage(addr, port,
+//						MessageFactory.getStored(chordController.getPeerInfo().getId(), fileID, chunkNo, 1), false);
+				return;
+			}
+		} else {
+			// enviar KEEPCHUNK para o seu sucessor
+//				Client.sendMessage(chordController.getSuccessor(0).getAddr(), chordController.getSuccessor(0).getPort(),
+//						MessageFactory.getKeepChunk(senderID, addr, port, fileID, chunkNo, replicationDegree, body_bytes),
+//						false);
+			Log.LOGGER.warning("Capacity Exceeded");
+		}
+//		} else {// sou o dono do ficheiro que quero fazer backup...
+//			// nao faz senido guardarmos um ficheiro com o chunk, visto que guardamos o
+//			// ficheiro
+//			// enviar o KEEPCHUNK
+//
+		c.getBackupController().increment(senderID, chunkNo);
+////			PeerInfo nextPeer = chordController.getSuccessor(0);
+////			DBUtils.setIamStoring(dbConnection, fileInfo.getFileId(), false);
+////			Client.sendMessage(nextPeer.getAddr(), nextPeer.getPort(),
+////					MessageFactory.getKeepChunk(senderID, addr, port, fileID, chunkNo, replicationDegree, body_bytes), false);
+//		}
+
+	}
+
+	private String parseGetChunkMsg(String[] secondLine) {
+
+		InetAddress addr = createInetAddress(secondLine[0]);
+		if (addr == null)
+			return null;
+
+		Integer chunkNo = Integer.valueOf(secondLine[3]);
+		Integer port = Integer.valueOf(secondLine[1]);
+		String fileID = secondLine[2];
+
+//		if (!DBUtils.checkStoredChunk(dbConnection, chunkInfo)) { // I have the chunk
+//			Client.sendMessage(this.peer.getChordManager().getSuccessor(0).getAddr(),
+//					this.peer.getChordManager().getSuccessor(0).getPort(),
+//					MessageFactory.getGetChunk(this.myPeerID, addr, port, fileID, chunkNo), false);
+//			return null;
+//		}
+
+		// ReSend GETCHUNK to successor
+//		String body = Utils.readFile(Peer.getPath().resolve(chunkInfo.getFilename()).toString());
+//		Client.sendMessage(addr, port,
+//				MessageFactory.getChunk(this.myPeerID, fileID, chunkNo, body.getBytes(StandardCharsets.ISO_8859_1)),
+//				false);
 		return null;
 	}
 

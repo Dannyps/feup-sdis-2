@@ -62,17 +62,15 @@ public class Server implements Runnable {
 		return true;
 	}
 
-	private boolean acceptServerSocket(SSLSocket socket) {
+	private SSLSocket acceptServerSocket() {
 		try {
-			socket = (SSLSocket) serverSocket.accept();
+			return (SSLSocket) serverSocket.accept();
 		} catch (IOException e) {
 			Log.LOGGER.warning("Socket closed");
-			return false;
 		} catch (Exception e) {
 			e.printStackTrace();
-			return false;
 		}
-		return true;
+		return null;
 	}
 
 	private boolean sockerStartHandshake(SSLSocket socket) {
@@ -90,8 +88,8 @@ public class Server implements Runnable {
 
 	private void loopRequests() {
 		while (true) {
-			SSLSocket socket = null;
-			if (!acceptServerSocket(socket))
+			SSLSocket socket = acceptServerSocket();
+			if (socket == null)
 				return;
 
 			if (!sockerStartHandshake(socket))
