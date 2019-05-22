@@ -10,5 +10,6 @@ public enum MessageType {
     CHORD_JOIN,
     CHORD_ACK,
     CHORD_LOOKUP,
-    CHORD_PUT
+    CHORD_PUT,
+    CHORD_ANNOUNCE_PEER
 }

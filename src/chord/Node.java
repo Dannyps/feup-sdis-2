@@ -7,6 +7,9 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import javax.net.ssl.SSLServerSocket;
@@ -29,6 +32,7 @@ public class Node {
     private SSLServerSocket socket;
     private AtomicReferenceArray<InetSocketAddress> fingerTable;
     private ConcurrentHashMap<ChordKey, Serializable> data;
+    private ThreadPoolExecutor executor;
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
@@ -44,6 +48,7 @@ public class Node {
             putObj(new ChordKey(test), test);
             // this.write(peer, myId);
         }
+        this.executor = new ThreadPoolExecutor(5, 10, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
         this.read();
     }
 
@@ -87,11 +92,7 @@ public class Node {
     private void join(InetSocketAddress peer) {
         try {
             Message<Integer> message = new Message<Integer>(MessageType.CHORD_JOIN, myAddress.getPort());
-            Message<ChordKey> response = (Message<ChordKey>) write(peer, message, true); // messageJoin
-            PrintMessage.w("Response", response.getArg().toString());
-            this.successor = response.getSource();
-            this.predecessor = response.getSource();
-            System.out.println(new ChordKey(successor));
+            write(peer, message, false); // messageJoin
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -186,7 +187,8 @@ public class Node {
 
             switch (o.getMsgType()) {
             case CHORD_JOIN:
-                return handleJoin(o);
+                handleJoin(o);
+                return null;
             case CHORD_PUT:
                 return handlePut(o);
             default:
@@ -200,33 +202,41 @@ public class Node {
         return null;
     }
 
-    public static boolean keyInBetween(ChordKey k, ChordKey a, ChordKey b){
+    public static boolean keyInBetween(ChordKey k, ChordKey a, ChordKey b) {
         return keyInBetween(k.getSucc(), a.getSucc(), b.getSucc());
     }
-    
 
     private static boolean keyInBetween(int k, int a, int b) {
-        return a>b && !(a<k) && k<=b;
+        return a > b && !(a < k) && k <= b;
     }
 
     private Message<?> handlePut(Message<KeyVal> o) {
         PrintMessage.w("Received PUT", "with arg: " + ((TestClass) o.getArg().getVal()).a);
-        PrintMessage.w("Data", "Internal data contains " + data.size() +" entries.");
+        PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
         boolean success = putObj(o.getArg().getKey(), (Serializable) o.getArg().getVal());
-        PrintMessage.w("Data", "Internal data contains " + data.size() +" entries.");
+        PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
         return new Message<Boolean>(MessageType.CHORD_ACK, success);
     }
 
-    private Message<ChordKey> handleJoin(Message<?> o) {
+    /**
+     * Someone has connect to this peer to enter the Chord ring. We will inform the
+     * rest of the ring of the news.
+     * 
+     * @param o the Message received
+     * @return a response
+     */
+    private void handleJoin(Message<Integer> o) {
         if (this.successor == null && this.predecessor == null) {
             // the joining node is the second one.
             this.successor = o.getSource();
             this.predecessor = o.getSource();
-        }else{
-
+        } else {
+            // this is a complex network
         }
-        Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_ACK, this.getKey());
-        return m;
+        // we must notify "all" nodes of the incoming peer
+        // the message bellow must be propagated through the ring.
+        AnnouncePeer announce = new AnnouncePeer(new ChordKey(o.getSource()), o.getSource());
+        executor.execute(new RunnableAnnouncePeer(this, announce, this.successor));
     }
 
     /**
@@ -269,7 +279,6 @@ public class Node {
             sslSocket.close();
             return o1;
         }
-
     }
 
     public Object getObj(ChordKey k) {
@@ -290,9 +299,18 @@ public class Node {
     public boolean putObj(ChordKey key, Serializable o) {
         int k = key.getSucc();
         int m = this.key.getSucc();
-        int a = new ChordKey(this.predecessor).getSucc();
-        PrintMessage.e("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
-        if (keyInBetween(k, a, m)) {
+        
+        int a=0;
+        boolean storeLocally = false;
+
+        if (this.successor == null) {
+            // this node does not have a successor... There is no network yet.
+            storeLocally = true;
+        }else{
+            PrintMessage.e("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
+            a = new ChordKey(this.predecessor).getSucc();
+        }
+        if (storeLocally || keyInBetween(k, a, m)) {
             // I should store this object
             PrintMessage.e("Put", "storing locally");
             this.data.put(key, o);
@@ -302,7 +320,7 @@ public class Node {
             // TODO someone else has to store it
             Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_PUT, new KeyVal(key, o));
             try {
-                Message<Boolean> response =  (Message<Boolean>) write(this.successor, message, true);
+                Message<Boolean> response = (Message<Boolean>) write(this.successor, message, true);
                 return response.getArg();
             } catch (Exception e) {
                 // TODO Auto-generated catch block
