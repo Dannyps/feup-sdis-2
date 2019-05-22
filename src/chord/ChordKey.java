@@ -25,8 +25,8 @@ public class ChordKey implements Serializable {
         BigInteger data = BigInteger.valueOf(intIP * port);
         this.key = hashData(data.toByteArray());
         this.succ = calcSucc(this.key);
-        PrintMessage.w("KEY", this.key.toString(0));
-        PrintMessage.w("KEY", Integer.toString(this.succ));
+        /*PrintMessage.w("KEY", this.key.toString(0));
+        PrintMessage.w("KEY", Integer.toString(this.succ));*/
     }
 
     private static int calcSucc(BigInteger k) {

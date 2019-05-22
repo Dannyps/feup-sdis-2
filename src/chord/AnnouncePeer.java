@@ -10,15 +10,14 @@ public class AnnouncePeer implements Serializable {
 
     private static final long serialVersionUID = 49846L;
 
-    boolean successorUpdated = false;
-    boolean predecessorUpdated = false;
+    private boolean successorUpdated = false;
+    private boolean predecessorUpdated = false;
+    private ChordKey newPeerKey = null;
+    private InetSocketAddress newPeerAddress = null;
 
     public boolean mustBeForwarded() {
-        return this.successorUpdated && this.predecessorUpdated;
+        return !(this.successorUpdated && this.predecessorUpdated);
     }
-
-    ChordKey newPeerKey;
-    InetSocketAddress newPeerAddress;
 
     private int hopCount = 0;
 
@@ -50,5 +49,19 @@ public class AnnouncePeer implements Serializable {
      */
     public int getHopCount() {
         return hopCount;
+    }
+
+    /**
+     * @param predecessorUpdated the predecessorUpdated to set
+     */
+    public void setPredecessorUpdated(boolean predecessorUpdated) {
+        this.predecessorUpdated = predecessorUpdated;
+    }
+
+    /**
+     * @param successorUpdated the successorUpdated to set
+     */
+    public void setSuccessorUpdated(boolean successorUpdated) {
+        this.successorUpdated = successorUpdated;
     }
 }

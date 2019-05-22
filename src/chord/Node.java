@@ -37,6 +37,7 @@ public class Node {
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
         this.key = new ChordKey(this.myAddress);
+        PrintMessage.i("Key", "My Chord Key is " + this.key.getSucc());
         this.fingerTable = new AtomicReferenceArray<>(m);
         this.data = new ConcurrentHashMap<ChordKey, Serializable>();
 
@@ -44,8 +45,8 @@ public class Node {
         if (peer != null) {
             join(peer);
 
-            TestClass test = new TestClass(3);
-            putObj(new ChordKey(test), test);
+            // TestClass test = new TestClass(3);
+            // putObj(new ChordKey(test), test);
             // this.write(peer, myId);
         }
         this.executor = new ThreadPoolExecutor(5, 10, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
@@ -92,7 +93,9 @@ public class Node {
     private void join(InetSocketAddress peer) {
         try {
             Message<Integer> message = new Message<Integer>(MessageType.CHORD_JOIN, myAddress.getPort());
-            write(peer, message, false); // messageJoin
+            Message<?> response = write(peer, message, true); // messageJoin
+            this.successor = response.getSource();
+            this.predecessor = response.getSource();
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -180,26 +183,78 @@ public class Node {
         }
     }
 
-    @SuppressWarnings("rawtypes")
-    private Message takeCareOfMessage(Message o) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private Message<?> takeCareOfMessage(Message o) {
+
+        PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + o.getSource() + ".");
 
         try {
-
             switch (o.getMsgType()) {
             case CHORD_JOIN:
-                handleJoin(o);
-                return null;
+                return handleJoin((Message<Integer>) o);
             case CHORD_PUT:
                 return handlePut(o);
+            case CHORD_ANNOUNCE_PEER:
+                handleAnnouncePeer(o);
+                break;
+            case CHORD_PREDECESSOR_HERE:
+                return handlePredecessorHere(o);
             default:
                 break;
             }
         } catch (Exception e) {
             // TODO: handle exception
+            e.printStackTrace();
         }
 
-        PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + o.getSource() + ".");
         return null;
+    }
+
+    private Message<Boolean> handlePredecessorHere(Message<InetSocketAddress> o) {
+        this.predecessor = o.getSource();
+        this.successor = o.getArg();
+        PrintMessage.e("Predecessor", "updated: " + this.successor.toString());
+        return new Message<Boolean>(MessageType.CHORD_ACK, true);
+    }
+
+    private void handleAnnouncePeer(Message<AnnouncePeer> o) {
+        PrintMessage.w("Announce", "handling Announce");
+        AnnouncePeer a = o.getArg();
+        a.increaseCount();
+        PrintMessage.i("Announce", Integer.toString(a.getHopCount()));
+        ChordKey npk = a.getNewPeerKey();
+        ChordKey pk = new ChordKey(this.predecessor);
+        ChordKey sk = new ChordKey(this.successor);
+        PrintMessage.i("Announce", "New predecessor. "
+                + String.format("np: %s, pre: %d, me: %d", npk.getSucc(), pk.getSucc(), key.getSucc()));
+        PrintMessage.i("Announce", "New successor. "
+                + String.format("np: %s, me: %d, suc: %d", npk.getSucc(), key.getSucc(), sk.getSucc()));
+        if (keyInBetween(npk, pk, this.key)) {
+            // the new node is my predecessor
+            this.predecessor = a.getNewPeerAddress();
+            a.setPredecessorUpdated(true);
+        } else if (keyInBetween(npk, this.key, sk)) {
+            // the new node is my successor
+            InetSocketAddress oldSuccessor = this.successor;
+            this.successor = a.getNewPeerAddress();
+            pokeSuccessor(oldSuccessor); // informing it it's my successor
+            a.setPredecessorUpdated(true);
+        } else {
+            // predecessor and successor not changed for me because of this new peer, carry
+            // on...
+            PrintMessage.i("Announce", "I'm unnaffected");
+        }
+
+        if (a.mustBeForwarded() && npk.getSucc() != this.key.getSucc()) {
+            PrintMessage.w("Announce", "Forwarding to " + sk.getSucc());
+            executor.execute(new RunnableAnnouncePeer(this, a, this.successor));
+        } else {
+            PrintMessage.w("Announce", "Finished at " + a.getHopCount() + " hops.");
+        }
+    }
+
+    private void pokeSuccessor(InetSocketAddress oldSuccessor) {
+        executor.execute(new RunnablePokeSuccessor(this, oldSuccessor));
     }
 
     public static boolean keyInBetween(ChordKey k, ChordKey a, ChordKey b) {
@@ -207,7 +262,7 @@ public class Node {
     }
 
     private static boolean keyInBetween(int k, int a, int b) {
-        return a > b && !(a < k) && k <= b;
+        return (a > b && k > a) || a < k && k <= b;
     }
 
     private Message<?> handlePut(Message<KeyVal> o) {
@@ -225,18 +280,21 @@ public class Node {
      * @param o the Message received
      * @return a response
      */
-    private void handleJoin(Message<Integer> o) {
+    private Message<Boolean> handleJoin(Message<Integer> o) {
         if (this.successor == null && this.predecessor == null) {
             // the joining node is the second one.
+            PrintMessage.w("Join", "Handling second join.");
             this.successor = o.getSource();
             this.predecessor = o.getSource();
+            return new Message<Boolean>(MessageType.CHORD_ACK, true);
         } else {
             // this is a complex network
+            // we must notify "all" nodes of the incoming peer
+            // the message bellow must be propagated through the ring.
+            AnnouncePeer announce = new AnnouncePeer(new ChordKey(o.getSource()), o.getSource());
+            executor.execute(new RunnableAnnouncePeer(this, announce, this.successor));
+            return new Message<Boolean>(MessageType.CHORD_ACK, false);
         }
-        // we must notify "all" nodes of the incoming peer
-        // the message bellow must be propagated through the ring.
-        AnnouncePeer announce = new AnnouncePeer(new ChordKey(o.getSource()), o.getSource());
-        executor.execute(new RunnableAnnouncePeer(this, announce, this.successor));
     }
 
     /**
@@ -299,14 +357,14 @@ public class Node {
     public boolean putObj(ChordKey key, Serializable o) {
         int k = key.getSucc();
         int m = this.key.getSucc();
-        
-        int a=0;
+
+        int a = 0;
         boolean storeLocally = false;
 
         if (this.successor == null) {
             // this node does not have a successor... There is no network yet.
             storeLocally = true;
-        }else{
+        } else {
             PrintMessage.e("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
             a = new ChordKey(this.predecessor).getSucc();
         }
