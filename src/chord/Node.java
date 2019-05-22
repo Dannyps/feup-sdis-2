@@ -198,7 +198,15 @@ public class Node {
 
         PrintMessage.w("Message", "Received message of type " + o.getMsgType() + " from " + o.getSource() + ".");
         return null;
+    }
 
+    public static boolean keyInBetween(ChordKey k, ChordKey a, ChordKey b){
+        return keyInBetween(k.getSucc(), a.getSucc(), b.getSucc());
+    }
+    
+
+    private static boolean keyInBetween(int k, int a, int b) {
+        return a>b && !(a<k) && k<=b;
     }
 
     private Message<?> handlePut(Message<KeyVal> o) {
@@ -214,6 +222,8 @@ public class Node {
             // the joining node is the second one.
             this.successor = o.getSource();
             this.predecessor = o.getSource();
+        }else{
+
         }
         Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_ACK, this.getKey());
         return m;
@@ -282,7 +292,7 @@ public class Node {
         int m = this.key.getSucc();
         int a = new ChordKey(this.predecessor).getSucc();
         PrintMessage.e("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
-        if (a>m && !(a<k) && k<=m) {
+        if (keyInBetween(k, a, m)) {
             // I should store this object
             PrintMessage.e("Put", "storing locally");
             this.data.put(key, o);
