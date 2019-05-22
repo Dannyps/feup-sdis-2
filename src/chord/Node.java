@@ -19,7 +19,7 @@ import message.MessageType;
 import utils.PrintMessage;
 
 public class Node {
-    public final int m = 8;
+    public final static int m = 8;
     ChordKey key;
     private InetSocketAddress myAddress = null;
     private InetSocketAddress successor = null;
@@ -27,13 +27,13 @@ public class Node {
 
     private SSLServerSocket socket;
     private AtomicReferenceArray<InetSocketAddress> fingerTable;
-    private ConcurrentHashMap<InetSocketAddress, Serializable> data;
+    private ConcurrentHashMap<ChordKey, Serializable> data;
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
-        this.key = new ChordKey(this);
+        this.key = new ChordKey(this.myAddress);
         this.fingerTable = new AtomicReferenceArray<>(m);
-        this.data = new ConcurrentHashMap<>();
+        this.data = new ConcurrentHashMap<ChordKey, Serializable>();
 
         this.socket = createSocket(myId);
         if (peer != null) {
@@ -87,6 +87,7 @@ public class Node {
             PrintMessage.w("Response", response.getArg().toString());
             this.successor = response.getSource();
             this.predecessor = response.getSource();
+            System.out.println(new ChordKey(successor));
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
             e.printStackTrace();
@@ -248,12 +249,32 @@ public class Node {
     }
 
     public Object getObj(ChordKey k){
-        
+        int kSucc = k.getSucc();
+        int mySucc = this.key.getSucc();
+        int predSucc = new ChordKey(this.predecessor).getSucc();
+        if(kSucc>predSucc && kSucc <=mySucc){
+            // I should have this object
+            return this.data.get(k);
+        }else{
+            //TODO someone else has it
+            
+        }
         
         return new Object();
     }
 
-    public boolean putObj(ChordKey k, Object o){
-        return false;
+    public boolean putObj(ChordKey k, Serializable o){
+        int kSucc = k.getSucc();
+        int mySucc = this.key.getSucc();
+        int predSucc = new ChordKey(this.predecessor).getSucc();
+        if(kSucc>predSucc && kSucc <=mySucc){
+            // I should have this object
+            this.data.put(k, o);
+            return true;
+        }else{
+            //TODO someone else has to store it
+            return false;   
+            
+        }
     }
 }

@@ -3,6 +3,8 @@ package chord;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -17,15 +19,15 @@ public class ChordKey implements Serializable {
     private BigInteger key;
     private int succ; // where the object pertaining to this key should be stored
 
-    public ChordKey(Node node) {
-        Inet4Address ip = (Inet4Address) node.getAddress().getAddress();
-        int port = node.getAddress().getPort();
+    public ChordKey(InetSocketAddress node) {
+        InetAddress ip = node.getAddress();
+        int port = node.getPort();
         int intIP = ip.hashCode();
         BigInteger data = BigInteger.valueOf(intIP * port);
         this.key = hashData(data.toByteArray());
-        Integer a = (int) Math.pow(2, node.m);
+        Integer a = (int) Math.pow(2, Node.m);
         this.succ = this.key.abs().mod( BigInteger.valueOf(a.intValue())).intValue();
-        this.succ %= Math.pow(2, node.m);
+        this.succ %= Math.pow(2, Node.m);
         PrintMessage.w("KEY", this.key.toString(0));
         PrintMessage.w("KEY", Integer.toString(this.succ));
     }
@@ -52,6 +54,13 @@ public class ChordKey implements Serializable {
     @Override
     public String toString() {
         return "Key: " + this.key.toString() + " Succ: " + Integer.toString(this.succ);
+    }
+
+    /**
+     * @return the succ
+     */
+    public int getSucc() {
+        return succ;
     }
 
 }
