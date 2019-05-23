@@ -1,5 +1,6 @@
 package service;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.DatagramPacket;
@@ -7,13 +8,17 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.util.concurrent.ExecutionException;
 
 import chord.Node;
+import message.Message;
+import message.MessageType;
+import rmi.RmiInterface;
 import utils.AddrPort;
 import utils.PrintMessage;
 
-public class Init {
+public class Init implements RmiInterface {
 
 	public static void main(String[] argv) throws UnknownHostException, InterruptedException, ExecutionException {
 		PrintMessage.printMessages = true;
@@ -80,5 +85,32 @@ public class Init {
 			System.exit(-3);
 			return null;
 		}
+	}
+
+	@Override
+	public void backup() {
+		File file = new File("teste.txt");
+
+		try {
+			byte[] fileContent = Files.readAllBytes(file.toPath());
+
+			Message message = new Message(MessageType.FILE_BACKUP, fileContent);
+
+
+			InetSocketAddress mySocket = new InetSocketAddress(getOwnAddress(), Integer.parseInt("1234"));
+
+			AddrPort addrPort = new AddrPort("localhost", 1234);
+
+			AddrPort peer = new AddrPort("1234");
+			Node node = new Node(mySocket, peer.getInetSocketAddress());
+
+			Message response = node.write(addrPort.getInetSocketAddress(), message, true);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 	}
 }
