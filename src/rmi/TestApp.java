@@ -5,7 +5,7 @@ import java.rmi.registry.Registry;
 
 public class TestApp {
 
-	private static RmiInterface stub;
+	private static RMIInterface stub;
 
     private TestApp() {}
 
@@ -13,12 +13,13 @@ public class TestApp {
 
 		try {
 			Registry registry = LocateRegistry.createRegistry(1234);
-			stub = (RmiInterface) registry.lookup("rmiTeste");
-			stub.backup();
+			stub = (RMIInterface) registry.lookup("rmiTeste");
+			//stub.backup();
 
 
 
 		} catch (Exception e) {
+			e.printStackTrace();
 			return;
 		}
 	}

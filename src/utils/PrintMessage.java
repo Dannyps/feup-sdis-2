@@ -60,8 +60,12 @@ public class PrintMessage {
             if (System.getProperty("os.name").toLowerCase().contains("win")) {
                 System.out.println("[" + action + "] " + m);
             } else {
-                System.out.println(accentColor + "[" + action + "] " + msgColor + m + ConsoleColours.RESET);
+                System.out.println(accentColor + "[" + action + "]" + msgColor + " " + m + ConsoleColours.RESET);
             }
         }
     }
+
+	public static void rmi(String string) {
+        PrintMessage.p("RMI", string, ConsoleColours.BLACK_BACKGROUND_BRIGHT+ConsoleColours.WHITE_BOLD_BRIGHT, ConsoleColours.BLACK_BACKGROUND+ConsoleColours.WHITE_BRIGHT);
+	}
 }

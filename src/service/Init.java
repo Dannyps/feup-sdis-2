@@ -14,11 +14,10 @@ import java.util.concurrent.ExecutionException;
 import chord.Node;
 import message.Message;
 import message.MessageType;
-import rmi.RmiInterface;
 import utils.AddrPort;
 import utils.PrintMessage;
 
-public class Init implements RmiInterface {
+public class Init {
 
 	public static void main(String[] argv) throws UnknownHostException, InterruptedException, ExecutionException {
 		PrintMessage.printMessages = true;
@@ -40,13 +39,15 @@ public class Init implements RmiInterface {
 
 				PrintMessage.i("Info", "Peers may connect to this chord network by using "
 						+ mySocket.getAddress().toString().substring(1) + ":" + mySocket.getPort() + " as peer.");
-				new Node(mySocket);
+				Node n = new Node(mySocket);
+				new RMIListen(n);
 			} else {
 				// I got an IP address. I must connect to it and join their chord.
 				PrintMessage.i("Info", "Joining the specified chord network.");
 				try {
 					AddrPort peer = new AddrPort(argv[1]);
-					new Node(mySocket, peer.getInetSocketAddress());
+					Node n = new Node(mySocket, peer.getInetSocketAddress());
+					new RMIListen(n);
 				} catch (Exception e) {
 					info.println("The passed address is not valid.");
 					e.printStackTrace();
@@ -85,32 +86,5 @@ public class Init implements RmiInterface {
 			System.exit(-3);
 			return null;
 		}
-	}
-
-	@Override
-	public void backup() {
-		File file = new File("teste.txt");
-
-		try {
-			byte[] fileContent = Files.readAllBytes(file.toPath());
-
-			Message message = new Message(MessageType.FILE_BACKUP, fileContent);
-
-
-			InetSocketAddress mySocket = new InetSocketAddress(getOwnAddress(), Integer.parseInt("1234"));
-
-			AddrPort addrPort = new AddrPort("localhost", 1234);
-
-			AddrPort peer = new AddrPort("1234");
-			Node node = new Node(mySocket, peer.getInetSocketAddress());
-
-			Message response = node.write(addrPort.getInetSocketAddress(), message, true);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
 	}
 }

@@ -6,6 +6,11 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -19,6 +24,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import message.Message;
 import message.MessageType;
+import rmi.RMIInterface;
 import message.KeyVal;
 import utils.PrintMessage;
 
@@ -43,6 +49,7 @@ public class Node {
 
         this.socket = createSocket(myId);
         if (peer != null) {
+            PrintMessage.w("Join", "Joining "+peer.toString());
             join(peer);
 
             // TestClass test = new TestClass(3);
@@ -50,7 +57,9 @@ public class Node {
             // this.write(peer, myId);
         }
         this.executor = new ThreadPoolExecutor(5, 10, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
-        this.read();
+
+        new Thread(new RunnableReader(this)).start(); // leave the reader running.
+
     }
 
     /**
