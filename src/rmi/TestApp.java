@@ -1,20 +1,13 @@
 package rmi;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-import message.Message;
-import message.MessageType;
-import utils.AddrPort;
-
-public class TesteApp {
+public class TestApp {
 
 	private static RmiInterface stub;
 
-    private TesteApp() {}
+    private TestApp() {}
 
 	public static void main(String[] args) {
 
