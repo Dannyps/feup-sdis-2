@@ -1,6 +1,5 @@
 package service;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.DatagramPacket;
@@ -8,12 +7,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
 import java.util.concurrent.ExecutionException;
 
 import chord.Node;
-import message.Message;
-import message.MessageType;
 import utils.AddrPort;
 import utils.PrintMessage;
 
@@ -58,7 +54,7 @@ public class Init {
 	}
 
 	/**
-	 * Gets his Own Address with the given port.
+	 * Gets its Own Address with the given port.
 	 *
 	 * @return this peer's address
 	 */

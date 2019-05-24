@@ -6,6 +6,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
+import chord.ChordKey;
 import chord.Node;
 import rmi.RMIInterface;
 import utils.PrintMessage;
@@ -18,7 +19,7 @@ public class RMIListen implements RMIInterface {
     private Node node;
 
     RMIListen(Node n) {
-        this.node=n;
+        this.node = n;
         bindToRMI();
     }
 
@@ -37,8 +38,9 @@ public class RMIListen implements RMIInterface {
     }
 
     @Override
-    public int backup(String filename, int replicationDegree) throws RemoteException {
-        return 0;
+    public Boolean backup(String filename, int replicationDegree) throws RemoteException {
+        node.putObj(new ChordKey(filename), filename + Integer.toString(replicationDegree));
+        return true;
     }
 
     @Override
@@ -61,5 +63,4 @@ public class RMIListen implements RMIInterface {
         return 0;
     }
 
-    
 }

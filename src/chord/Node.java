@@ -6,11 +6,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -22,14 +17,13 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import message.KeyVal;
 import message.Message;
 import message.MessageType;
-import rmi.RMIInterface;
-import message.KeyVal;
 import utils.PrintMessage;
 
 public class Node {
-    public final static int m = 16;
+    public final static int m = 4;
     ChordKey key;
     private InetSocketAddress myAddress = null;
     private InetSocketAddress successor = null;
@@ -49,7 +43,7 @@ public class Node {
 
         this.socket = createSocket(myId);
         if (peer != null) {
-            PrintMessage.w("Join", "Joining "+peer.toString());
+            PrintMessage.w("Join", "Joining " + peer.toString());
             join(peer);
 
             // TestClass test = new TestClass(3);
@@ -60,6 +54,26 @@ public class Node {
 
         new Thread(new RunnableReader(this)).start(); // leave the reader running.
 
+        try {
+            printStatus();
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+    }
+
+    private void printStatus() throws InterruptedException {
+        while (true) {
+            if(this.successor == null || this.predecessor ==null){
+                Thread.sleep(5000);
+                continue;
+            }
+            PrintMessage.d("Predecessor : ", Integer.toString(new ChordKey(this.predecessor).getSucc()));
+            PrintMessage.d("Me          : ", Integer.toString(this.getKey().getSucc()));
+            PrintMessage.d("Successor   : ", Integer.toString(new ChordKey(this.successor).getSucc()));
+            Thread.sleep(5000);
+        }
     }
 
     /**
@@ -275,7 +289,7 @@ public class Node {
     }
 
     private Message<?> handlePut(Message<KeyVal> o) {
-        PrintMessage.w("Received PUT", "with arg: " + ((TestClass) o.getArg().getVal()).a);
+        PrintMessage.w("Received PUT", "with arg: " + o.getArg().getVal());
         PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
         boolean success = putObj(o.getArg().getKey(), (Serializable) o.getArg().getVal());
         PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
@@ -367,27 +381,28 @@ public class Node {
         int k = key.getSucc();
         int m = this.key.getSucc();
 
-        int a = 0;
+        int a = new ChordKey(this.predecessor).getSucc();
         boolean storeLocally = false;
 
         if (this.successor == null) {
             // this node does not have a successor... There is no network yet.
             storeLocally = true;
         } else {
-            PrintMessage.e("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
+            PrintMessage.d("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
             a = new ChordKey(this.predecessor).getSucc();
         }
         if (storeLocally || keyInBetween(k, a, m)) {
             // I should store this object
-            PrintMessage.e("Put", "storing locally");
+            PrintMessage.i("Put", "storing locally");
             this.data.put(key, o);
             return true;
         } else {
-            PrintMessage.e("Put", "storing remotly");
+            PrintMessage.i("Put", "storing remotly");
             // TODO someone else has to store it
             Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_PUT, new KeyVal(key, o));
             try {
                 Message<Boolean> response = (Message<Boolean>) write(this.successor, message, true);
+                PrintMessage.w("PUT", "Received " + response.getArg() + "after storing remotly.");
                 return response.getArg();
             } catch (Exception e) {
                 // TODO Auto-generated catch block

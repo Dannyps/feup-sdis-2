@@ -68,4 +68,8 @@ public class PrintMessage {
 	public static void rmi(String string) {
         PrintMessage.p("RMI", string, ConsoleColours.BLACK_BACKGROUND_BRIGHT+ConsoleColours.WHITE_BOLD_BRIGHT, ConsoleColours.BLACK_BACKGROUND+ConsoleColours.WHITE_BRIGHT);
 	}
+
+	public static void d(String action, String m) {
+        PrintMessage.p("DEBUG: "+action, m, ConsoleColours.RED_BACKGROUND+ConsoleColours.GREEN_BRIGHT, ConsoleColours.BLACK_BACKGROUND+ConsoleColours.WHITE_BRIGHT);
+	}
 }
