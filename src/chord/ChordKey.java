@@ -7,8 +7,6 @@ import java.net.InetSocketAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import utils.PrintMessage;
-
 /**
  * ChordKey
  */
@@ -74,4 +72,15 @@ public class ChordKey implements Serializable {
         return succ;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof ChordKey)
+            return this.getSucc() == ((ChordKey) obj).getSucc();
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return this.getSucc();
+    }
 }

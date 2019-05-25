@@ -36,6 +36,8 @@ public class TestApp {
 			switch (command) {
 			case "BACKUP":
 				backup(args);
+			case "RESTORE":
+				restore(args);
 				break;
 			/*
 			 * case "RESTORE": restore(stub, args); break; case "DELETE": delete(stub,
@@ -84,6 +86,24 @@ public class TestApp {
 		return true;
 	}
 
-	// esta funcao tem de ir para o node e o node tem de extender a RmiInterface
-
+	private Object restore(String args[]) {
+		Object b = false;
+		try {
+			b = stub.restore(args[2]);
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+			PrintMessage.e("Error", "backup usage: java rmi.TestApp BACKUP <filename> <replication_degree>");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if (b != null) {
+			PrintMessage.i("Success", "The backup thread has been launched successfully.");
+		}
+		return true;
+	}
 }

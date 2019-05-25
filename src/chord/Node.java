@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -371,9 +372,11 @@ public class Node {
         int kSucc = k.getSucc();
         int mySucc = this.key.getSucc();
         int predSucc = new ChordKey(this.predecessor).getSucc();
-        if (kSucc > predSucc && kSucc <= mySucc) {
+        if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
-            return this.data.get(k);
+            Object o = this.data.get(k);
+            PrintMessage.e("GET", "Lookup k-" + k + " v-" + o.getClass());
+            return o;
         } else {
             // TODO someone else has it
 
@@ -398,7 +401,7 @@ public class Node {
         }
         if (storeLocally || keyInBetween(k, a, m)) {
             // I should store this object
-            PrintMessage.i("Put", "storing locally");
+            PrintMessage.i("Put", "storing locally: k-" + key + " v-" + o);
             this.data.put(key, o);
             return true;
         } else {
