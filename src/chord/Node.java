@@ -23,7 +23,7 @@ import message.MessageType;
 import utils.PrintMessage;
 
 public class Node {
-    public final static int m = 4;
+    public final static int m = 14;
     ChordKey key;
     private InetSocketAddress myAddress = null;
     private InetSocketAddress successor = null;
@@ -53,19 +53,20 @@ public class Node {
         this.executor = new ThreadPoolExecutor(5, 10, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 
         new Thread(new RunnableReader(this)).start(); // leave the reader running.
-
-        try {
-            printStatus();
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        new Thread(() -> {
+            try {
+                printStatus();
+            } catch (InterruptedException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+        }).start();
 
     }
 
     private void printStatus() throws InterruptedException {
         while (true) {
-            if(this.successor == null || this.predecessor ==null){
+            if (this.successor == null || this.predecessor == null) {
                 Thread.sleep(5000);
                 continue;
             }
@@ -252,23 +253,25 @@ public class Node {
                 + String.format("np: %s, pre: %d, me: %d", npk.getSucc(), pk.getSucc(), key.getSucc()));
         PrintMessage.i("Announce", "New successor. "
                 + String.format("np: %s, me: %d, suc: %d", npk.getSucc(), key.getSucc(), sk.getSucc()));
-        if (keyInBetween(npk, pk, this.key)) {
+        if (npk.getSucc() != this.key.getSucc() && keyInBetween(npk, pk, this.key)) {
             // the new node is my predecessor
             this.predecessor = a.getNewPeerAddress();
             a.setPredecessorUpdated(true);
+            PrintMessage.d("d", "predecessor updated here.");
         } else if (keyInBetween(npk, this.key, sk)) {
             // the new node is my successor
             InetSocketAddress oldSuccessor = this.successor;
             this.successor = a.getNewPeerAddress();
             pokeSuccessor(oldSuccessor); // informing it it's my successor
-            a.setPredecessorUpdated(true);
+            a.setSuccessorUpdated(true);
+            PrintMessage.d("d", "successor updated here.");
         } else {
             // predecessor and successor not changed for me because of this new peer, carry
             // on...
             PrintMessage.i("Announce", "I'm unnaffected");
         }
 
-        if (a.mustBeForwarded() && npk.getSucc() != this.key.getSucc()) {
+        if (a.mustBeForwarded()) {
             PrintMessage.w("Announce", "Forwarding to " + sk.getSucc());
             executor.execute(new RunnableAnnouncePeer(this, a, this.successor));
         } else {
@@ -303,7 +306,9 @@ public class Node {
      * @param o the Message received
      * @return a response
      */
-    private Message<Boolean> handleJoin(Message<Integer> o) {
+    private Message<Boolean> handleJoin(Message<Integer> o)
+
+    {
         if (this.successor == null && this.predecessor == null) {
             // the joining node is the second one.
             PrintMessage.w("Join", "Handling second join.");
