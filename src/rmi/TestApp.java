@@ -36,6 +36,7 @@ public class TestApp {
 			switch (command) {
 			case "BACKUP":
 				backup(args);
+				break;
 			case "RESTORE":
 				restore(args);
 				break;
@@ -89,6 +90,7 @@ public class TestApp {
 	private Object restore(String args[]) {
 		Object b = false;
 		try {
+			PrintMessage.i("Success", "The restore thread has been launched successfully.");
 			b = stub.restore(args[2]);
 		} catch (NumberFormatException e) {
 			// TODO Auto-generated catch block
@@ -102,7 +104,7 @@ public class TestApp {
 			e.printStackTrace();
 		}
 		if (b != null) {
-			PrintMessage.i("Success", "The backup thread has been launched successfully.");
+			PrintMessage.i("Response", b.toString());
 		}
 		return true;
 	}

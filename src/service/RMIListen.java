@@ -44,10 +44,17 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Object restore(String filename) throws RemoteException {
-        String res =  String.valueOf(node.getObj(new ChordKey(filename)));
-        System.out.println(res);
-        PrintMessage.i("GOT", res);
-        return true;
+        String res;
+        try {
+            res = String.valueOf(node.getObj(new ChordKey(filename)));
+            System.out.println(res);
+            PrintMessage.i("GOT", res);
+            return res;
+        } catch (Exception e) {
+            PrintMessage.e("RESTORE", "A requested file was not found.");
+            System.exit(10);
+        }
+        return null;
     }
 
     @Override

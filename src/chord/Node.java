@@ -368,21 +368,30 @@ public class Node {
         }
     }
 
-    public Object getObj(ChordKey k) {
+    public Object getObj(ChordKey k) throws Exception {
         int kSucc = k.getSucc();
         int mySucc = this.key.getSucc();
         int predSucc = new ChordKey(this.predecessor).getSucc();
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
             Object o = this.data.get(k);
+            if(o==null){
+                throw new Exception( "value not found");
+            }
             PrintMessage.e("GET", "Lookup k-" + k + " v-" + o.getClass());
             return o;
         } else {
-            // TODO someone else has it
+            Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_LOOKUP, k);
+            try {
+                Message<KeyVal> response = (Message<KeyVal>) this.write(this.successor, m, true);
+                return response.getArg().getVal();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
         }
-
-        return new Object();
+        return null;
     }
 
     public boolean putObj(ChordKey key, Serializable o) {
