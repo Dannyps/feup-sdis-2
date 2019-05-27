@@ -32,8 +32,7 @@ public class RMIListen implements RMIInterface {
             registry.rebind(Integer.toString(node.getKey().getSucc()), stub);
             PrintMessage.rmi("Peer ready on " + Integer.toString(node.getKey().getSucc()));
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            PrintMessage.rmi("Couldn't connect to rmiregistry. This peer will run in standalone mode.");
         }
     }
 
