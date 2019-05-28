@@ -6,7 +6,6 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -224,6 +223,8 @@ public class Node {
                 break;
             case CHORD_PREDECESSOR_HERE:
                 return handlePredecessorHere(o);
+            case CHORD_LOOKUP:
+                return handleGet(o);
             default:
                 break;
             }
@@ -300,6 +301,21 @@ public class Node {
         return new Message<Boolean>(MessageType.CHORD_ACK, success);
     }
 
+    private Message<?> handleGet(Message<ChordKey> o) {
+        PrintMessage.w("Received GET", "with arg: " + o.getArg().toString());
+        PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
+        Object ret;
+        try {
+            ret = getObj(o.getArg());
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            ret = null;
+        }
+        PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
+        return new Message<KeyVal>(MessageType.CHORD_ACK, new KeyVal(o.getArg(), ret));
+    }
+
     /**
      * Someone has connect to this peer to enter the Chord ring. We will inform the
      * rest of the ring of the news.
@@ -368,6 +384,7 @@ public class Node {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Object getObj(ChordKey k) throws Exception {
         int kSucc = k.getSucc();
         int mySucc = this.key.getSucc();
@@ -381,6 +398,7 @@ public class Node {
             PrintMessage.e("GET", "Lookup k-" + k + " v-" + o.getClass());
             return o;
         } else {
+            PrintMessage.w("GET", "Forwarding request for " + k.toString());
             Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_LOOKUP, k);
             try {
                 Message<KeyVal> response = (Message<KeyVal>) this.write(this.successor, m, true);
@@ -394,6 +412,7 @@ public class Node {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     public boolean putObj(ChordKey key, Serializable o) {
         int k = key.getSucc();
         int m = this.key.getSucc();
