@@ -425,9 +425,9 @@ public class Node {
         try {
             FileOutputStream oos = new FileOutputStream("y.pdf");
 
-            String content = (String) o;
+            byte[] content = (byte[]) o;
 
-            oos.write(content.getBytes());
+            oos.write(content);
             //oos.write(o.toString().getBytes());
             oos.close();
 

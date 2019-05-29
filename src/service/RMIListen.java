@@ -43,9 +43,9 @@ public class RMIListen implements RMIInterface {
     public Boolean backup(String filename, int replicationDegree) throws RemoteException {
 
         File file = new File(filename);
-        String content = new String();
+        byte[] content = null;
         try {
-            content = new String(Files.readAllBytes(file.toPath()));
+            content = Files.readAllBytes(file.toPath());
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
