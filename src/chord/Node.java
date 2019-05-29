@@ -1,6 +1,5 @@
 package chord;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -36,13 +35,15 @@ public class Node {
     private ConcurrentHashMap<ChordKey, Serializable> data;
     private ThreadPoolExecutor executor;
 
+    private ConcurrentHashMap<String, ChordKey> fNameKeys;
+
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
         this.key = new ChordKey(this.myAddress);
         PrintMessage.i("Key", "My Chord Key is " + this.key.getSucc());
         this.fingerTable = new AtomicReferenceArray<>(m);
         this.data = new ConcurrentHashMap<ChordKey, Serializable>();
-
+        this.fNameKeys = new ConcurrentHashMap<String, ChordKey>();
         this.socket = createSocket(myId);
         if (peer != null) {
             PrintMessage.w("Join", "Joining " + peer.toString());
@@ -450,7 +451,7 @@ public class Node {
         if (storeLocally || keyInBetween(k, a, m)) {
             // I should store this object
             PrintMessage.i("Put", "storing locally: k-" + key + " v-" + "");
-            this.data.put(key, o);
+//            this.data.put(key, o); // data will now be written to disc
             return true;
         } else {
             PrintMessage.i("Put", "storing remotly");
@@ -468,4 +469,8 @@ public class Node {
 
         }
     }
+
+	public void addFileNameKeyPair(String filename, ChordKey key2) {
+        this.fNameKeys.put(filename, key2);
+	}
 }

@@ -50,7 +50,11 @@ public class RMIListen implements RMIInterface {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        node.putObj(new ChordKey(filename), content);
+        ChordKey key = new ChordKey(filename);
+        boolean success = node.putObj(key, content);
+        if(success){
+            this.node.addFileNameKeyPair(filename, key);
+        }
         return true;
     }
 
