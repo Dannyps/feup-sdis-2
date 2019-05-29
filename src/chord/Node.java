@@ -9,6 +9,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.file.Files;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -416,7 +417,14 @@ public class Node {
         int predSucc = new ChordKey(this.predecessor).getSucc();
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
-            Object o = this.data.get(k);
+
+            File file = new File(backupFolder.getAbsolutePath() + "/file_" + k.getSucc());
+
+            Object o = null;
+            if(file.exists()) {
+                o = Files.readAllBytes(file.toPath());
+            }
+
             if (o == null) {
                 throw new Exception("value not found");
             }
@@ -496,5 +504,9 @@ public class Node {
      */
     public ConcurrentHashMap<String, ChordKey> getfNameKeys() {
         return fNameKeys;
+    }
+
+    public File getRestoreFolder() {
+        return restoreFolder;
     }
 }

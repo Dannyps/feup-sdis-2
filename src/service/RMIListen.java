@@ -1,6 +1,7 @@
 package service;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.rmi.Remote;
@@ -60,11 +61,15 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Object restore(String filename) throws RemoteException {
-        String res;
+        byte[] res;
         try {
-            res = String.valueOf(node.getObj(new ChordKey(filename)));
+            res = (byte[]) node.getObj(node.getfNameKeys().get(filename));
+            FileOutputStream fos = new FileOutputStream(new File(node.getRestoreFolder().getAbsolutePath() + "/" + filename));
+            fos.write(res);
+            fos.close();
+
             System.out.println(res);
-            PrintMessage.i("GOT", res);
+            // PrintMessage.i("GOT", res);
             return res;
         } catch (Exception e) {
             PrintMessage.e("RESTORE", "A requested file was not found.");
