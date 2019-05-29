@@ -25,7 +25,7 @@ public class RunnablePokeSuccessor implements Runnable {
         Message<InetSocketAddress> m = new Message<InetSocketAddress>(MessageType.CHORD_PREDECESSOR_HERE, oldSuccessor);
         try {
             Message<?> response = this.node.write(this.node.getSuccessor(), m, true);
-            PrintMessage.i("Poke", "Poked successor ("+this.node.getSuccessor().toString()+") successfully?" + response.getMsgType());
+            PrintMessage.i("Poke", "Poked successor ("+this.node.getSuccessor().toString()+") successfully? " + response.getMsgType());
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

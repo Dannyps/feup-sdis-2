@@ -26,7 +26,6 @@ public class Node {
     public final static int m = 14;
     ChordKey key;
     private InetSocketAddress myAddress = null;
-    private InetSocketAddress successor = null;
     private InetSocketAddress predecessor = null;
 
     private SSLServerSocket socket;
@@ -66,13 +65,13 @@ public class Node {
 
     private void printStatus() throws InterruptedException {
         while (true) {
-            if (this.successor == null || this.predecessor == null) {
+            if (this.getSuccessor() == null || this.predecessor == null) {
                 Thread.sleep(5000);
                 continue;
             }
             PrintMessage.d("Predecessor : ", Integer.toString(new ChordKey(this.predecessor).getSucc()));
             PrintMessage.d("Me          : ", Integer.toString(this.getKey().getSucc()));
-            PrintMessage.d("Successor   : ", Integer.toString(new ChordKey(this.successor).getSucc()));
+            PrintMessage.d("Successor   : ", Integer.toString(new ChordKey(this.getSuccessor()).getSucc()));
             Thread.sleep(5000);
         }
     }
@@ -118,7 +117,7 @@ public class Node {
         try {
             Message<Integer> message = new Message<Integer>(MessageType.CHORD_JOIN, myAddress.getPort());
             Message<?> response = write(peer, message, true); // messageJoin
-            this.successor = response.getSource();
+            setNthFinger(0, response.getSource());
             this.predecessor = response.getSource();
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
@@ -159,7 +158,7 @@ public class Node {
      * @return the successor
      */
     public InetSocketAddress getSuccessor() {
-        return successor;
+        return getNthFinger(0);
     }
 
     private static SSLServerSocket createSocket(InetSocketAddress myId) {
@@ -238,8 +237,8 @@ public class Node {
 
     private Message<Boolean> handlePredecessorHere(Message<InetSocketAddress> o) {
         this.predecessor = o.getSource();
-        this.successor = o.getArg();
-        PrintMessage.e("Predecessor", "updated: " + this.successor.toString());
+        this.setNthFinger(0, o.getArg());
+        PrintMessage.e("Predecessor", "updated: " + this.getSuccessor().toString());
         return new Message<Boolean>(MessageType.CHORD_ACK, true);
     }
 
@@ -250,7 +249,7 @@ public class Node {
         PrintMessage.i("Announce", Integer.toString(a.getHopCount()));
         ChordKey npk = a.getNewPeerKey();
         ChordKey pk = new ChordKey(this.predecessor);
-        ChordKey sk = new ChordKey(this.successor);
+        ChordKey sk = new ChordKey(this.getSuccessor());
         PrintMessage.i("Announce", "New predecessor. "
                 + String.format("np: %s, pre: %d, me: %d", npk.getSucc(), pk.getSucc(), key.getSucc()));
         PrintMessage.i("Announce", "New successor. "
@@ -262,8 +261,8 @@ public class Node {
             PrintMessage.d("d", "predecessor updated here.");
         } else if (keyInBetween(npk, this.key, sk)) {
             // the new node is my successor
-            InetSocketAddress oldSuccessor = this.successor;
-            this.successor = a.getNewPeerAddress();
+            InetSocketAddress oldSuccessor = this.getSuccessor();
+            this.setNthFinger(0, a.getNewPeerAddress());
             pokeSuccessor(oldSuccessor); // informing it it's my successor
             a.setSuccessorUpdated(true);
             PrintMessage.d("d", "successor updated here.");
@@ -275,7 +274,7 @@ public class Node {
 
         if (a.mustBeForwarded()) {
             PrintMessage.w("Announce", "Forwarding to " + sk.getSucc());
-            executor.execute(new RunnableAnnouncePeer(this, a, this.successor));
+            executor.execute(new RunnableAnnouncePeer(this, a, this.getSuccessor()));
         } else {
             PrintMessage.w("Announce", "Finished at " + a.getHopCount() + " hops.");
         }
@@ -326,10 +325,10 @@ public class Node {
     private Message<Boolean> handleJoin(Message<Integer> o)
 
     {
-        if (this.successor == null && this.predecessor == null) {
+        if (this.getSuccessor() == null && this.predecessor == null) {
             // the joining node is the second one.
             PrintMessage.w("Join", "Handling second join.");
-            this.successor = o.getSource();
+            this.setNthFinger(0, o.getSource());
             this.predecessor = o.getSource();
             return new Message<Boolean>(MessageType.CHORD_ACK, true);
         } else {
@@ -337,7 +336,7 @@ public class Node {
             // we must notify "all" nodes of the incoming peer
             // the message bellow must be propagated through the ring.
             AnnouncePeer announce = new AnnouncePeer(new ChordKey(o.getSource()), o.getSource());
-            executor.execute(new RunnableAnnouncePeer(this, announce, this.successor));
+            executor.execute(new RunnableAnnouncePeer(this, announce, this.getSuccessor()));
             return new Message<Boolean>(MessageType.CHORD_ACK, false);
         }
     }
@@ -401,7 +400,7 @@ public class Node {
             PrintMessage.w("GET", "Forwarding request for " + k.toString());
             Message<ChordKey> m = new Message<ChordKey>(MessageType.CHORD_LOOKUP, k);
             try {
-                Message<KeyVal> response = (Message<KeyVal>) this.write(this.successor, m, true);
+                Message<KeyVal> response = (Message<KeyVal>) this.write(this.getSuccessor(), m, true);
                 return response.getArg().getVal();
             } catch (Exception e) {
                 // TODO Auto-generated catch block
@@ -420,7 +419,7 @@ public class Node {
         int a = new ChordKey(this.predecessor).getSucc();
         boolean storeLocally = false;
 
-        if (this.successor == null) {
+        if (this.getSuccessor() == null) {
             // this node does not have a successor... There is no network yet.
             storeLocally = true;
         } else {
@@ -437,7 +436,7 @@ public class Node {
             // TODO someone else has to store it
             Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_PUT, new KeyVal(key, o));
             try {
-                Message<Boolean> response = (Message<Boolean>) write(this.successor, message, true);
+                Message<Boolean> response = (Message<Boolean>) write(this.getSuccessor(), message, true);
                 PrintMessage.w("PUT", "Received " + response.getArg() + "after storing remotly.");
                 return response.getArg();
             } catch (Exception e) {
