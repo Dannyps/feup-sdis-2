@@ -1,5 +1,8 @@
 package service;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -38,7 +41,19 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Boolean backup(String filename, int replicationDegree) throws RemoteException {
-        node.putObj(new ChordKey(filename), filename + Integer.toString(replicationDegree));
+
+        File file = new File(filename);
+        String content = new String();
+        try {
+            content = new String(Files.readAllBytes(file.toPath()));
+
+            System
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        node.putObj(new ChordKey(filename), content);
         return true;
     }
 

@@ -1,5 +1,8 @@
 package chord;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -392,8 +395,8 @@ public class Node {
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
             Object o = this.data.get(k);
-            if(o==null){
-                throw new Exception( "value not found");
+            if (o == null) {
+                throw new Exception("value not found");
             }
             PrintMessage.e("GET", "Lookup k-" + k + " v-" + o.getClass());
             return o;
@@ -420,6 +423,24 @@ public class Node {
         int a = new ChordKey(this.predecessor).getSucc();
         boolean storeLocally = false;
 
+        try {
+            FileOutputStream oos = new FileOutputStream("y.pdf");
+
+            String content = (String) o;
+
+            oos.write(content.getBytes());
+            //oos.write(o.toString().getBytes());
+            oos.close();
+
+
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+
         if (this.successor == null) {
             // this node does not have a successor... There is no network yet.
             storeLocally = true;
@@ -429,7 +450,7 @@ public class Node {
         }
         if (storeLocally || keyInBetween(k, a, m)) {
             // I should store this object
-            PrintMessage.i("Put", "storing locally: k-" + key + " v-" + o);
+            PrintMessage.i("Put", "storing locally: k-" + key + " v-" + "");
             this.data.put(key, o);
             return true;
         } else {
