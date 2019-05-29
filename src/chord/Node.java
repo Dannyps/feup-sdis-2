@@ -38,6 +38,7 @@ public class Node {
 
     private File backupFolder;
     private File restoreFolder;
+    private ConcurrentHashMap<String, ChordKey> fNameKeys;
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
@@ -45,7 +46,7 @@ public class Node {
         PrintMessage.i("Key", "My Chord Key is " + this.key.getSucc());
         this.fingerTable = new AtomicReferenceArray<>(m);
         this.data = new ConcurrentHashMap<ChordKey, Serializable>();
-
+        this.fNameKeys = new ConcurrentHashMap<String, ChordKey>();
         this.socket = createSocket(myId);
         if (peer != null) {
             PrintMessage.w("Join", "Joining " + peer.toString());
@@ -467,7 +468,7 @@ public class Node {
                 e1.printStackTrace();
             }
 
-            this.data.put(key, o);
+            //this.data.put(key, o);
             return true;
         } else {
             PrintMessage.i("Put", "storing remotly");
@@ -485,4 +486,8 @@ public class Node {
 
         }
     }
+
+	public void addFileNameKeyPair(String filename, ChordKey key2) {
+        this.fNameKeys.put(filename, key2);
+	}
 }
