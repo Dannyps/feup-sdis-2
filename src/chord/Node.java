@@ -472,5 +472,12 @@ public class Node {
 
 	public void addFileNameKeyPair(String filename, ChordKey key2) {
         this.fNameKeys.put(filename, key2);
-	}
+    }
+    
+    /**
+     * @return the fNameKeys
+     */
+    public ConcurrentHashMap<String, ChordKey> getfNameKeys() {
+        return fNameKeys;
+    }
 }

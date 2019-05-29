@@ -39,6 +39,8 @@ public class TestApp {
 				break;
 			case "RESTORE":
 				restore(args);
+				case "STATE":
+			state();
 				break;
 			/*
 			 * case "RESTORE": restore(stub, args); break; case "DELETE": delete(stub,
@@ -62,6 +64,15 @@ public class TestApp {
 			System.exit(-2);
 		} catch (Exception e) {
 			System.err.println("Client exception: " + e.toString());
+			e.printStackTrace();
+		}
+	}
+
+	private void state() {
+		try {
+			System.out.println(stub.info());
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

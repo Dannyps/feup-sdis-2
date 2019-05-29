@@ -52,7 +52,7 @@ public class RMIListen implements RMIInterface {
         }
         ChordKey key = new ChordKey(filename);
         boolean success = node.putObj(key, content);
-        if(success){
+        if (success) {
             this.node.addFileNameKeyPair(filename, key);
         }
         return true;
@@ -80,7 +80,17 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public String info() throws RemoteException {
-        return null;
+        // get State
+        var wrapper = new Object() {
+            public String res ="";
+        };
+
+        wrapper.res += "Backed up files:" + System.lineSeparator();
+        node.getfNameKeys().forEach((String s, ChordKey k) -> {
+            wrapper.res += s + System.lineSeparator();
+        });
+
+        return wrapper.res;
     }
 
     @Override
