@@ -48,15 +48,15 @@ public class MessageFactory {
 	}
 
 	public static String appendBody(String message, byte[] body) throws UnsupportedEncodingException {
-		StringBuilder s_message = new StringBuilder(message);
-		s_message.append(new String(body, StandardCharsets.ISO_8859_1));
-		return s_message.toString();
+		String bodyStr = new String(body, StandardCharsets.ISO_8859_1);
+		message += bodyStr;
+		return message;
 	}
 
 	public static String getPutChunk(String id, InetAddress addr, int port, String fileID, int chunkNo,
-			int replicationDeg, byte[] body, String encryptKey) {
-		String msg = appendLine(getFirstLine(MessageType.PUTCHUNK, VERSION, id),
-				new Object[] { id, addr.getHostAddress(), port, fileID, chunkNo, replicationDeg, encryptKey });
+			int replicationDeg, byte[] body, String encryptKey, String fileName) {
+		String msg = appendLine(getFirstLine(MessageType.PUTCHUNK, VERSION, id), new Object[] { id,
+				addr.getHostAddress(), port, fileID, chunkNo, replicationDeg, encryptKey, fileName });
 		try {
 			return appendBody(msg, body);
 		} catch (UnsupportedEncodingException e) {
@@ -83,8 +83,10 @@ public class MessageFactory {
 		return appendLine(getFirstLine(MessageType.INITDELETE, VERSION, senderId), new Object[] { fileId });
 	}
 
-	public static String getChunk(String senderId, String fileID, int chunkNo, byte[] body) {
-		String msg = appendLine(getFirstLine(MessageType.CHUNK, VERSION, senderId), new Object[] { fileID, chunkNo });
+	public static String getChunk(String senderId, String fileID, int chunkNo, byte[] body, String encryptionKey,
+			String fileName) {
+		String msg = appendLine(getFirstLine(MessageType.CHUNK, VERSION, senderId),
+				new Object[] { fileID, chunkNo, encryptionKey, fileName });
 		try {
 			return appendBody(msg, body);
 		} catch (UnsupportedEncodingException e) {
@@ -96,9 +98,9 @@ public class MessageFactory {
 	}
 
 	public static String getKeepChunk(String senderId, InetAddress addr, int port, String fileID, int chunkNo,
-			int replicationDeg, byte[] body) {
-		String msg = appendLine(getFirstLine(MessageType.KEEPCHUNK, VERSION, senderId),
-				new Object[] { senderId, addr.getHostAddress(), port, fileID, chunkNo, replicationDeg });
+			int replicationDeg, byte[] body, String encryption_key, String fileName) {
+		String msg = appendLine(getFirstLine(MessageType.KEEPCHUNK, VERSION, senderId), new Object[] { senderId,
+				addr.getHostAddress(), port, fileID, chunkNo, replicationDeg, encryption_key, fileName });
 		try {
 			return appendBody(msg, body);
 		} catch (UnsupportedEncodingException e) {

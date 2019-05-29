@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import peer.Peer;
+import utils.Utils;
 
 import java.io.Serializable;
 
@@ -76,7 +77,7 @@ public class ControllerRestore implements Serializable {
 			return null;
 
 		List<ArrayList<Byte>> file = files.get(fileId);
-		byte[] reassembling = new byte[2 * Peer.MAX_CHUNK_SIZE * file.size()];
+		byte[] reassembling = new byte[2 * Utils.MAX_LENGTH_CHUNK * file.size()];
 
 		int idx = 0;
 		for (List<Byte> chunk : file) {

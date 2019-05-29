@@ -8,15 +8,16 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
-import java.util.concurrent.Future;
-
 import controller.Controller;
-import peer.Peer;
 
 public class Chunk implements Comparator<Chunk>, Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 9111267157409076221L;
 
 	protected String senderID;
 	protected String fileID;
@@ -171,25 +172,25 @@ public class Chunk implements Comparator<Chunk>, Serializable {
 
 	public byte[] retrieveData() {
 
-		AsynchronousFileChannel channel;
-		try {
-			channel = AsynchronousFileChannel.open(Paths.get(filePath), StandardOpenOption.READ);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return new byte[0];
-		}
-
-		long position = 0;
-		ByteBuffer buffer = ByteBuffer.allocate(Peer.MAX_CHUNK_SIZE);
-		Future<Integer> operation = channel.read(buffer, position);
-
-		while (!operation.isDone())
-			;
-
-		buffer.flip();
-		byte[] data = new byte[buffer.limit()];
-		buffer.get(data);
-		buffer.clear();
+//		AsynchronousFileChannel channel;
+//		try {
+//			channel = AsynchronousFileChannel.open(Paths.get(filePath), StandardOpenOption.READ);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//			return new byte[0];
+//		}
+//
+//		long position = 0;
+//		ByteBuffer buffer = ByteBuffer.allocate(Peer.MAX_CHUNK_SIZE);
+//		Future<Integer> operation = channel.read(buffer, position);
+//
+//		while (!operation.isDone())
+//			;
+//
+//		buffer.flip();
+//		byte[] data = new byte[buffer.limit()];
+//		buffer.get(data);
+//		buffer.clear();
 
 		return data;
 	}

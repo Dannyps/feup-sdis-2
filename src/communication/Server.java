@@ -25,9 +25,19 @@ public class Server implements Runnable {
 	private Peer peer;
 	private SSLServerSocket serverSocket;
 
-	public Server(String[] cipher_suite, int port) throws Exception {
+	private int predecessorPort;
+	private String predecessorAddress;
+	private int successorPort;
+	private String successorAddress;
+
+	public Server(String[] cipher_suite, int port, int predecessorPort, String predecessorAddress, int successorPort,
+			String successorAddress) throws Exception {
 		this.port_number = port;
 		this.peer = null;
+		this.predecessorPort = predecessorPort;
+		this.predecessorAddress = predecessorAddress;
+		this.successorPort = successorPort;
+		this.successorAddress = successorAddress;
 		setSystemProperties();
 	}
 
@@ -95,8 +105,8 @@ public class Server implements Runnable {
 			if (!sockerStartHandshake(socket))
 				return;
 
-			SingletonThreadPoolExecutor.getInstance().get()
-					.execute(new MessageHandler(peer, readSocket(socket), socket));
+			SingletonThreadPoolExecutor.getInstance().get().execute(new MessageHandler(peer, readSocket(socket), socket,
+					predecessorPort, predecessorAddress, successorPort, successorAddress));
 		}
 	}
 

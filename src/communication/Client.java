@@ -20,7 +20,6 @@ public class Client {
 	private static final String SUPPORTED_CIPHERS = "TLS_DHE_RSA_WITH_AES_128_CBC_SHA";
 	private static final ArrayList<String> cipher = new ArrayList<String>(Arrays.asList(SUPPORTED_CIPHERS));
 
-
 	public static void main(String[] args) {
 
 	}

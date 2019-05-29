@@ -11,7 +11,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-
 import chunks.DeleteChunk;
 import chunks.GetChunk;
 import chunks.PutChunk;
@@ -24,31 +23,55 @@ import utils.Utils;
 
 public class Peer {
 
-	public static final int MAX_CHUNK_SIZE = 64000;
+//	public static final int MAX_CHUNK_SIZE = 16;
 	private static final int STORAGE_CAPACITY = Integer.MAX_VALUE;
 	private static int STORAGE_USED = 0;
 	private static final String ENCRYPTION_ALGORITHM = "md5";
-	private static final String PEER_BASE_PATH = "peer_";
+//	private static final String PEER_BASE_PATH = "peer_";
 	private static Path path;
-
+	private static String id;
 	private Server server;
 
-	public Peer(Server server, String id) {
+	public Peer(/*** ChordManager chordManager, ***/
+	Server server) {
+		/*** this.chordManager = chordManager; ***/
 		this.server = server;
 		this.server.setPeer(this);
-		Controller.getInstance().init();
+		this.id = generatePeerID();
+		Controller.getInstance().init(id);
 		generatePath(id);
+	}
+
+	/**
+	 * Creates (if necessary) the directory where the chunks are stored
+	 * 
+	 * @param id
+	 */
+	private static void generatePath(String id) {
+		String peerPath = Controller.getInstance().getPeerFilePath(id);
+		Peer.setPath(Paths.get(peerPath));
+	}
+
+	private static String generatePeerID() {
+		/***
+		 * StringBuilder s = new StringBuilder("Your ID: ");
+		 * s.append(chordController.getPeerInfo().getId());
+		 * System.out.println(s.toString()); return
+		 * chordController.getPeerInfo().getId();
+		 ***/
+		return "ID_TODO";
 	}
 
 	public void joinNetwork(InetAddress addr, Integer port) {
 		if (addr != null) {
-//			chordController.join(addr, port);
+			/*** chordController.join(addr, port); ***/
 		}
 		executeThreadPool(SingletonThreadPoolExecutor.getInstance().get());
 	}
 
 	private void executeThreadPool(ScheduledThreadPoolExecutor s) {
 		s.execute(server);
+		/*** s.execute(chordManager); ***/
 	}
 
 	/**
@@ -61,6 +84,7 @@ public class Peer {
 	public String getFileID(String filename) throws IOException, NoSuchAlgorithmException {
 		MessageDigest digest = MessageDigest.getInstance(ENCRYPTION_ALGORITHM);
 		byte[] hash = digest.digest(generateFileIdentifier(filename).getBytes(StandardCharsets.UTF_8));
+		/*** return Utils.getIdFromHash(hash, ChordManager.getM() / 8); ***/
 		return Utils.getIdFromHash(hash, 0 / 8);
 	}
 
@@ -97,7 +121,7 @@ public class Peer {
 	}
 
 	/*** */
-	public void backup(String filename, Short degree, String encryptKey) {
+	public void backup(String filename, Short degree, String encryptKey, String fileName) {
 		StringBuilder s = new StringBuilder(filename);
 		String fileID;
 		s.append(" -> ");
@@ -113,79 +137,44 @@ public class Peer {
 		Confidentiality c = (encryptKey == null) ? new Confidentiality() : new Confidentiality(encryptKey);
 
 		byte[] file = Utils.readFile(filename).getBytes(StandardCharsets.ISO_8859_1);
-//		BackupRequest backupRequest = new BackupRequest(fileID, filename,
-//				new String(c.getKey(), StandardCharsets.ISO_8859_1), degree,
-//				Math.floorDiv(file.length, CHUNK_SIZE) + 1);
-		backupChunks(file, fileID, c, degree, encryptKey);
+		backupChunks(file, fileID, c, degree, fileName);
 	}
 
-	private void backupChunks(byte[] file, String fileID, Confidentiality c, Short degree, String encryptKey) {
+	private void backupChunks(byte[] file, String fileID, Confidentiality c, Short degree, String fileName) {
 		int chunkNo = 0;
 		byte[] body;
 
-		while ((chunkNo + 1) * MAX_CHUNK_SIZE <= file.length) {
-			body = c.encript(Arrays.copyOfRange(file, chunkNo * MAX_CHUNK_SIZE, (chunkNo + 1) * MAX_CHUNK_SIZE));
-			SingletonThreadPoolExecutor.getInstance().get()
-					.execute(new PutChunk(fileID, chunkNo, degree, body, encryptKey));
+		String encryptKey = new String(c.getKey(), StandardCharsets.ISO_8859_1);
+		int chunksNo = file.length / Utils.MAX_LENGTH_CHUNK + 1;
+		Controller.getInstance().getBackupController().addFile(chunksNo, degree, fileID);
+
+		while ((chunkNo + 1) * Utils.MAX_LENGTH_CHUNK <= file.length) {
+			body = c.encript(
+					Arrays.copyOfRange(file, chunkNo * Utils.MAX_LENGTH_CHUNK, (chunkNo + 1) * Utils.MAX_LENGTH_CHUNK));
+			SingletonThreadPoolExecutor.getInstance().get().execute(
+					new PutChunk(fileID, chunkNo, degree, body, encryptKey, fileName/*** , this.getChordManager() ***/
+					));
 			chunkNo++;
 		}
 
-		Controller.getInstance().getBackupController().addFile(chunkNo + 1, degree, fileID);
-		body = c.encript(Arrays.copyOfRange(file, chunkNo * MAX_CHUNK_SIZE, file.length));
-		SingletonThreadPoolExecutor.getInstance().get()
-				.execute(new PutChunk(fileID, chunkNo, degree, body, encryptKey));
+		body = c.encript(Arrays.copyOfRange(file, chunkNo * Utils.MAX_LENGTH_CHUNK, file.length));
+		SingletonThreadPoolExecutor.getInstance().get().execute(
+				new PutChunk(fileID, chunkNo, degree, body, encryptKey, fileName/*** , this.getChordManager() ***/
+				));
 	}
 
-//	public void delete(String fileID) {
-//		Controller.getInstance().registerDelete(fileID);
-//		SingletonThreadPoolExecutor.getInstance().get().execute(new DeleteChunk(fileID));
-//	}
-//
-//	public void restore(BackupRequest backupRequest) {
-//		Controller.getInstance().getRestoredController().addFile(backupRequest.getNumberOfChunks(),
-//				backupRequest.getFileId());
-//
-//		for (int i = 0; i < backupRequest.getNumberOfChunks(); i++) {
-//			SingletonThreadPoolExecutor.getInstance().get().execute(new GetChunk(backupRequest, i));
-//		}
-//	}
-
-	/**
-	 * When a peer joins, tell him which files he is responsible for.
-	 */
-	public void sendResponsability() {
-		// tem de ser feito
+	public void delete(String fileID) {
+		SingletonThreadPoolExecutor.getInstance().get().execute(new DeleteChunk(fileID/*** , this.getChordManager() ***/
+		));
 	}
 
-	/**
-	 * Creates (if necessary) the directory where the chunks are stored
-	 * 
-	 * @param id
-	 */
-	private static void generatePath(String id) {
-		StringBuilder s = new StringBuilder(PEER_BASE_PATH);
-		s.append(id);
-
-		Peer.setPath(Paths.get(s.toString()));
-
-		if (!Files.exists(Peer.getPath())) {
-			try {
-				Files.createDirectory(Peer.getPath());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-		if (Files.exists(Peer.getPath())) {
-			return;
-		}
-
-		try {
-			Files.createDirectory(Peer.getPath());
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
+	public void restore(String fileID) {
+		int chunkNo = Controller.getInstance().getBackupController().getNumberOfChunks(fileID);
+		Controller.getInstance().getRestoredController().addFile(chunkNo, fileID);
+		for (int i = 0; i < chunkNo; i++) {
+			SingletonThreadPoolExecutor.getInstance().get()
+					.execute(new GetChunk(fileID, i/*** , this.getChordManager() ***/
+					));
 		}
 	}
 

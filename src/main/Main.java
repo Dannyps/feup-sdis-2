@@ -15,6 +15,11 @@ public class Main {
 	private static Server server;
 	private static Peer peer;
 
+	private static int predecessorPort;
+	private static String predecessorAddress;
+	private static int successorPort;
+	private static String successorAddress;
+
 	public static void main(String[] args) {
 		if (!verifyArguments(args))
 			return;
@@ -22,14 +27,18 @@ public class Main {
 		if (!parseArguments(args))
 			return;
 
-//		chordController = new ChordController(localPort);
+		/***
+		 * ChordManager chordManager = new ChordManager(port); System.out.println("Your
+		 * ID: " + chordManager.getPeerInfo().getId());
+		 * generatePath(chordManager.getPeerInfo().getId());
+		 ***/
 
 		server = initiateServer(localPort);
 		if (server == null)
 			return;
 
-		peer = new Peer(server, generatePeerID());
-
+		peer = new Peer(/*** chordManager, ***/
+				server);
 		peer.joinNetwork(firstPeerAddress, firstPeerPort);
 
 		new ReadInput(peer).run();
@@ -47,29 +56,29 @@ public class Main {
 
 	private static boolean parseArguments(String[] args) {
 		localPort = Integer.valueOf(args[0]);
-		if (args.length >= 3) {
-			try {
-				firstPeerAddress = InetAddress.getByName(args[1]);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-				return false;
+		if (args.length >= 5) {
+			predecessorAddress = args[1];
+			predecessorPort = Integer.valueOf(args[2]);
+			successorAddress = args[3];
+			successorPort = Integer.valueOf(args[4]);
+			if (args.length >= 7) {
+
+				try {
+					firstPeerAddress = InetAddress.getByName(args[5]);
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+					return false;
+				}
+				firstPeerPort = Integer.valueOf(args[6]);
 			}
-			firstPeerPort = Integer.valueOf(args[2]);
 		}
 		return true;
 	}
 
-	private static String generatePeerID() {
-//		StringBuilder s = new StringBuilder("Your ID: ");
-//		s.append(chordController.getPeerInfo().getId());
-//		System.out.println(s.toString());
-//		return chordController.getPeerInfo().getId();
-		return "dslknfksd";
-	}
-
 	private static Server initiateServer(Integer port) {
 		try {
-			return new Server(new String[] { "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" }, port);
+			return new Server(new String[] { "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" }, port, predecessorPort,
+					predecessorAddress, successorPort, successorAddress);
 		} catch (Exception e1) {
 			e1.printStackTrace();
 			return null;

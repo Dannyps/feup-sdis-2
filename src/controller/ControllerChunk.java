@@ -31,8 +31,21 @@ public class ControllerChunk implements Serializable {
 		return null;
 	}
 
+	public synchronized Chunk getChunk(String id) {
+		for (Chunk c : chunks) {
+			if (c.getId().equals(id))
+				return c;
+		}
+		return null;
+	}
+
 	public synchronized boolean saveChunk(int chunkNo, String id) {
-		return getChunk(chunkNo, id) != null;
+		Chunk chunk = getChunk(chunkNo, id);
+		if (chunk == null) {
+			return false;
+		}
+
+		return chunk.store();
 	}
 
 	public synchronized boolean decrementReplicationCount(int chunkNo, String id) {

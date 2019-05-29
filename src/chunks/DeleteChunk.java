@@ -9,8 +9,15 @@ import utils.Log;
 
 public class DeleteChunk extends Chunk implements Runnable {
 
-	public DeleteChunk(String fileId) {
-		super(null, fileId, -1);
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1955071931073502132L;
+
+	public DeleteChunk(String fileId/*** , ChordManager chordManager ***/
+	) {
+		super(""/*** chordManager.getPeerInfo().getId() ***/
+				, fileId, -1);
 	}
 
 	@Override
@@ -19,10 +26,11 @@ public class DeleteChunk extends Chunk implements Runnable {
 		s.append(fileID);
 
 		Log.LOGGER.info(s.toString());
-//		PeerInfo successor = chordController.getChunkOwner(fileID);
-//		Client.sendMessage(successor.getAddr(), successor.getPort(), MessageFactory.getInitDelete(senderID, fileID),
-//				false);
-
+		/***
+		 * PeerInfo successor = chordController.getChunkOwner(fileID);
+		 * Client.sendMessage(successor.getAddr(), successor.getPort(),
+		 * MessageFactory.getInitDelete(senderID, fileID), false);
+		 ***/
 		try {
 			Client.sendMessage(InetAddress.getByName("localhost"), 8081, MessageFactory.getInitDelete(senderID, fileID),
 					false);

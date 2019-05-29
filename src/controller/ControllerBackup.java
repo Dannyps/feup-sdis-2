@@ -2,6 +2,7 @@ package controller;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -88,5 +89,17 @@ public class ControllerBackup implements Serializable {
 		s.append("\n");
 
 		return s.toString();
+	}
+
+	public int getDesiredRepDegree(String fileId) {
+		return this.desiredRepDegrees.get(fileId);
+	}
+
+	public Enumeration<String> getFileNames() {
+		return this.filesChunks.keys();
+	}
+
+	public int getNumberOfChunks(String fileID) {
+		return this.filesChunks.get(fileID).size();
 	}
 }

@@ -2,10 +2,11 @@ package main;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.InputMismatchException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
+import controller.Controller;
 import peer.Peer;
 
 public class ReadInput {
@@ -53,9 +54,9 @@ public class ReadInput {
 		if (option == 1) {
 			ReadInput.backupOption(scanner, peer, (short) 1, (short) 9);
 		} else if (option == 2) {
-//			ReadInput.manipulateFile("delete", scanner, peer);
+			ReadInput.manipulateFile("delete", scanner, peer);
 		} else if (option == 3) {
-//			ReadInput.manipulateFile("restore", scanner, peer);
+			ReadInput.manipulateFile("restore", scanner, peer);
 		} else if (option == 0) {
 			Thread.currentThread().interrupt();
 		} else {
@@ -65,18 +66,17 @@ public class ReadInput {
 		return ok;
 	}
 
-//	private static void manipulateFile(String action, Scanner scanner, Peer peer) {
-//		List<BackupRequest> backups = new LinkedList<BackupRequest>();// tem de se ir buscar os ficheiros q se fez
-//																		// request de backup
-//		if (action.equals("delete")) {
-//			deleteOption(backups, scanner, peer);
-//		} else if (action.equals("restore")) {
-//			restoreOption(backups, scanner, peer);
-//		} else {
-//			System.out.println("no defined action for manipulating file");
-//		}
-//
-//	}
+	private static void manipulateFile(String action, Scanner scanner, Peer peer) {
+		List<String> backups = Collections.list(Controller.getInstance().getBackupController().getFileNames());
+		if (action.equals("delete")) {
+			deleteOption(backups, scanner, peer);
+		} else if (action.equals("restore")) {
+			restoreOption(backups, scanner, peer);
+		} else {
+			System.out.println("no defined action for manipulating file");
+		}
+
+	}
 
 	private void menu() {
 		StringBuilder s = new StringBuilder("Enter an option: \n");
@@ -88,47 +88,47 @@ public class ReadInput {
 		System.out.println(s.toString());
 	}
 
-//	private static String buildFileList(List<BackupRequest> requests, String action) {
-//		StringBuilder s = new StringBuilder();
-//		s.append("Select a file to ");
-//		s.append(action);
-//		s.append(":");
-//
-//		int i = 0;
-//		for (BackupRequest backup : requests) {
-//			s.append(i);
-//			s.append(". ");
+	private static String buildFileList(List<String> requests, String action) {
+		StringBuilder s = new StringBuilder();
+		s.append("Select a file to ");
+		s.append(action);
+		s.append(":\n");
+
+		int i = 0;
+		for (String backup : requests) {
+			s.append(i);
+			s.append(". ");
+			s.append(backup);
 //			s.append(backup.getFilename());
 //			s.append(" -> ");
 //			s.append(backup.getFileId());
-//			i++;
-//		}
-//		return s.toString();
-//	}
+			i++;
+		}
+		return s.toString();
+	}
 
-//	private static void restoreOption(List<BackupRequest> requests, Scanner scanner, Peer peer) {
-//		if (!requests.isEmpty()) {
-//			peer.restore(requests
-//					.get(readListOption(scanner, buildFileList(requests, "restore"), requests.size(), "restore")));
-//		} else {
-//			System.out.println("You need to backup files before restoring");
-//		}
-//	}
-//
-//	private static void deleteOption(List<BackupRequest> requests, Scanner scanner, Peer peer) {
-//		if (!requests.isEmpty()) {
-//			peer.delete(
-//					requests.get(readListOption(scanner, buildFileList(requests, "delete"), requests.size(), "delete"))
-//							.getFileId());
-//		} else {
-//			System.out.println("You need to backup files before deleting");
-//		}
-//	}
+	private static void restoreOption(List<String> requests, Scanner scanner, Peer peer) {
+		if (!requests.isEmpty()) {
+			peer.restore(requests
+					.get(readListOption(scanner, buildFileList(requests, "restore"), requests.size(), "restore")));
+		} else {
+			System.out.println("You need to backup files before restoring");
+		}
+	}
+
+	private static void deleteOption(List<String> requests, Scanner scanner, Peer peer) {
+		if (!requests.isEmpty()) {
+			peer.delete(requests
+					.get(readListOption(scanner, buildFileList(requests, "delete"), requests.size(), "delete")));
+		} else {
+			System.out.println("You need to backup files before deleting");
+		}
+	}
 
 	private static void backupOption(Scanner scanner, Peer peer, short minRepDegree, short maxRepDegree) {
 		System.out.println("Enter File name:");
-		String filename = scanner.next();
-		if (!Files.exists(Paths.get(filename))) {
+		String fileName = scanner.next();
+		if (!Files.exists(Paths.get(fileName))) {
 			System.out.println("Error: file does not exist!");
 			return;
 		}
@@ -145,7 +145,7 @@ public class ReadInput {
 			degree = readOption(scanner);
 		} while ((degree < minRepDegree) || (degree > maxRepDegree));
 
-		peer.backup(filename, degree, null);
+		peer.backup(fileName, degree, null, fileName);
 		System.out.println("Called Backup!");
 	}
 
