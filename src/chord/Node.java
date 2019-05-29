@@ -1,5 +1,6 @@
 package chord;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -35,6 +36,8 @@ public class Node {
     private ConcurrentHashMap<ChordKey, Serializable> data;
     private ThreadPoolExecutor executor;
 
+    private File backupFolder;
+    private File restoreFolder;
     private ConcurrentHashMap<String, ChordKey> fNameKeys;
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
@@ -65,6 +68,25 @@ public class Node {
             }
         }).start();
 
+        createFolders();
+    }
+
+    private void createFolders() {
+
+        File peerFolder = new File("peer_" + key.getSucc());
+        if(!peerFolder.isDirectory() || !peerFolder.exists()) {
+            peerFolder.mkdir();
+        }
+
+        backupFolder = new File(peerFolder.getAbsolutePath() + "/backup");
+        if(!backupFolder.isDirectory() || !backupFolder.exists()) {
+            backupFolder.mkdir();
+        }
+
+        restoreFolder = new File(peerFolder.getAbsolutePath() + "/restore");
+        if(!restoreFolder.isDirectory() || !restoreFolder.exists()) {
+            restoreFolder.mkdir();
+        }
     }
 
     private void printStatus() throws InterruptedException {
@@ -423,24 +445,6 @@ public class Node {
         int a = new ChordKey(this.predecessor).getSucc();
         boolean storeLocally = false;
 
-        try {
-            FileOutputStream oos = new FileOutputStream("y.pdf");
-
-            byte[] content = (byte[]) o;
-
-            oos.write(content);
-            //oos.write(o.toString().getBytes());
-            oos.close();
-
-
-        } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-
         if (this.getSuccessor() == null) {
             // this node does not have a successor... There is no network yet.
             storeLocally = true;
@@ -451,7 +455,20 @@ public class Node {
         if (storeLocally || keyInBetween(k, a, m)) {
             // I should store this object
             PrintMessage.i("Put", "storing locally: k-" + key + " v-" + "");
-//            this.data.put(key, o); // data will now be written to disc
+
+            try {
+                FileOutputStream oos = new FileOutputStream(backupFolder.getAbsolutePath() + "/file_" + key.getSucc());
+                oos.write((byte[]) o);
+                oos.close();
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+
+            //this.data.put(key, o);
             return true;
         } else {
             PrintMessage.i("Put", "storing remotly");
