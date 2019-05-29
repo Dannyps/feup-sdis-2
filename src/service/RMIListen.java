@@ -46,9 +46,6 @@ public class RMIListen implements RMIInterface {
         String content = new String();
         try {
             content = new String(Files.readAllBytes(file.toPath()));
-
-            System
-
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
