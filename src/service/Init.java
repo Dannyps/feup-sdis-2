@@ -1,7 +1,6 @@
 package service;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -19,7 +18,6 @@ public class Init {
 		PrintMessage.printMessages = true;
 		PrintMessage.printWarnings = true;
 		// an alternative to System.out.
-		PrintStream info = new PrintStream(System.out);
 		PrintMessage.i("Info", "Initiating... ");
 		InetSocketAddress mySocket = null;
 
@@ -45,7 +43,7 @@ public class Init {
 					Node n = new Node(mySocket, peer.getInetSocketAddress());
 					new RMIListen(n);
 				} catch (Exception e) {
-					info.println("The passed address is not valid.");
+					PrintMessage.e("FATAL", "The passed address is not valid.");
 					e.printStackTrace();
 					System.exit(2);
 				}

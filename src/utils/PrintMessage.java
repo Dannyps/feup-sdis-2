@@ -1,5 +1,8 @@
 package utils;
 
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+
 /**
  * PrintMesssage
  */
@@ -30,7 +33,7 @@ public class PrintMessage {
      * @param m
      */
     public static void e(String action, String m) {
-        PrintMessage.p(action, m, ConsoleColours.RED_BOLD_BRIGHT, ConsoleColours.RED);
+        PrintMessage.p(action, m, ConsoleColours.RED_BOLD_BRIGHT, ConsoleColours.RED, System.err);
     }
 
     /**
@@ -54,13 +57,17 @@ public class PrintMessage {
             PrintMessage.p(action, m, ConsoleColours.YELLOW_BOLD_BRIGHT, ConsoleColours.YELLOW);
     }
 
-    public static void p(String action, String m, String accentColor, String msgColor) {
+    public static void p(String action, String m, String accentColor, String msgColor){
+        p(action, m, accentColor, msgColor, System.out);
+    }
+    
+    public static void p(String action, String m, String accentColor, String msgColor, PrintStream out) {
         if (printMessages) {
             // if is Windows, don't use colours
             if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                System.out.println("[" + action + "] " + m);
+                out.println("[" + action + "] " + m);
             } else {
-                System.out.println(accentColor + "[" + action + "]" + msgColor + " " + m + ConsoleColours.RESET);
+                out.println(accentColor + "[" + action + "]" + msgColor + " " + m + ConsoleColours.RESET);
             }
         }
     }
