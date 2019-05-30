@@ -62,6 +62,8 @@ public class RMIListen implements RMIInterface {
             boolean success = node.putObj(key, content);
             if (success) {
                 ourFile.getFileDegreeKey().put(i, key);
+            } else {
+                i--;
             }
         }
         this.node.addFileNameKeyPair(filename, ourFile);
