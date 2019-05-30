@@ -23,8 +23,10 @@ public class ChordKey implements Serializable {
         BigInteger data = BigInteger.valueOf(intIP * port);
         this.key = hashData(data.toByteArray());
         this.succ = calcSucc(this.key);
-        /*PrintMessage.w("KEY", this.key.toString(0));
-        PrintMessage.w("KEY", Integer.toString(this.succ));*/
+        /*
+         * PrintMessage.w("KEY", this.key.toString(0)); PrintMessage.w("KEY",
+         * Integer.toString(this.succ));
+         */
     }
 
     private static int calcSucc(BigInteger k) {
@@ -35,10 +37,19 @@ public class ChordKey implements Serializable {
         return s;
     }
 
-    public ChordKey(Object o){
+    public ChordKey(Object o) {
         this.key = hashData(BigInteger.valueOf(o.hashCode()).toByteArray());
-        this.succ=calcSucc(this.key);
-        
+        this.succ = calcSucc(this.key);
+    }
+
+    public ChordKey(String o) {
+        this.key = new BigInteger(o);
+        this.succ = calcSucc(this.key);
+    }
+
+    public ChordKey(String filename, int i) {
+        this.key = hashData(BigInteger.valueOf(filename.hashCode() * i).toByteArray());
+        this.succ = calcSucc(this.key);
     }
 
     private static BigInteger hashData(byte[] data) {
@@ -74,7 +85,7 @@ public class ChordKey implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof ChordKey)
+        if (obj instanceof ChordKey)
             return this.getSucc() == ((ChordKey) obj).getSucc();
         return false;
     }

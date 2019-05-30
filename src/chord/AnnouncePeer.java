@@ -52,16 +52,16 @@ public class AnnouncePeer implements Serializable {
     }
 
     /**
-     * @param predecessorUpdated the predecessorUpdated to set
+     * 
      */
-    public void setPredecessorUpdated(boolean predecessorUpdated) {
-        this.predecessorUpdated = predecessorUpdated;
+    public void setPredecessorUpdated() {
+        this.predecessorUpdated = true;
     }
 
     /**
-     * @param successorUpdated the successorUpdated to set
+     *
      */
-    public void setSuccessorUpdated(boolean successorUpdated) {
-        this.successorUpdated = successorUpdated;
+    public void setSuccessorUpdated() {
+        this.successorUpdated = true;
     }
 }

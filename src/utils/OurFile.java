@@ -10,9 +10,6 @@ import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 import chord.ChordKey;
-import chord.Node;
-import utils.AddrPort;
-import utils.PrintMessage;
 
 public class OurFile {
     String filename;

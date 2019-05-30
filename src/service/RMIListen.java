@@ -56,8 +56,7 @@ public class RMIListen implements RMIInterface {
         OurFile ourFile = new OurFile(filename, replicationDegree);
 
         for(int i = 0 ; i < replicationDegree ; i++) {
-            String str = filename + "_" + i;
-            ChordKey key = new ChordKey(str);
+            ChordKey key = new ChordKey(filename, i);
 
             boolean success = node.putObj(key, content);
             if (success) {
@@ -87,7 +86,7 @@ public class RMIListen implements RMIInterface {
             }
         } catch (Exception e) {
             PrintMessage.e("RESTORE", "A requested file was not found.");
-            System.exit(10);
+            // System.exit(10);
         }
         return null;
     }

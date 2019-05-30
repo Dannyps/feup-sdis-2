@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Files;
@@ -31,6 +32,7 @@ import utils.PrintMessage;
 
 public class Node {
     public final static int m = 14;
+    private static final String FILE_PREFIX = "file_";
     ChordKey key;
     private InetSocketAddress myAddress = null;
     private InetSocketAddress predecessor = null;
@@ -365,14 +367,17 @@ public class Node {
         if (npk.getSucc() != this.key.getSucc() && keyInBetween(npk, pk, this.key)) {
             // the new node is my predecessor
             this.predecessor = a.getNewPeerAddress();
-            a.setPredecessorUpdated(true);
+            new Thread(() -> {
+                relocateData(pk, new ChordKey(this.predecessor));
+            }).start();
+            a.setPredecessorUpdated();
             PrintMessage.d("d", "predecessor updated here.");
         } else if (keyInBetween(npk, this.key, sk)) {
             // the new node is my successor
             InetSocketAddress oldSuccessor = this.getSuccessor();
             this.setNthFinger(0, a.getNewPeerAddress());
             pokeSuccessor(oldSuccessor); // informing it it's my successor
-            a.setSuccessorUpdated(true);
+            a.setSuccessorUpdated();
             PrintMessage.d("d", "successor updated here.");
         } else {
             // predecessor and successor not changed for me because of this new peer, carry
@@ -459,6 +464,33 @@ public class Node {
 
     /**
      * 
+     * @param ppk the old predecessor's (now a pre-predecessor) key
+     * @param pk  the predecessor's key.
+     * 
+     *            documents whose key are in between these two should be relocated
+     *            to the predecessor.
+     */
+    private void relocateData(ChordKey ppk, ChordKey pk) {
+        File[] directoryListing = this.backupFolder.listFiles();
+        PrintMessage.d("REALLOCATION", "entered. " + Integer.toString(directoryListing.length) + " files found.");
+        for (var f : directoryListing) {
+            ChordKey k = new ChordKey(f.getName().split(FILE_PREFIX)[1]);
+            if (keyInBetween(k, ppk, pk)) {
+                try {
+                    boolean success = putObj(k, Files.readAllBytes(f.toPath()));
+                    if (success) {
+                        PrintMessage.d("REALLOCATION", "deleting " + f.getName());
+                        f.delete();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * 
      * @param peer     the destination peer
      * @param o        the object to send (usually a message)
      * @param response wether a response should be caught from the peer
@@ -471,7 +503,7 @@ public class Node {
         try {
             sslSocket = (SSLSocket) sslSocketFactory.createSocket(peer.getAddress(), peer.getPort());
         } catch (IOException e) {
-            throw new Exception(e);
+            PrintMessage.e("FATAL", "could not write message to peer " + peer.toString());
         }
 
         sslSocket.setEnabledCipherSuites(sslSocket.getSupportedCipherSuites());
@@ -506,20 +538,15 @@ public class Node {
         int mySucc = this.key.getSucc();
         int predSucc = new ChordKey(this.predecessor).getSucc();
 
-        System.out.println("here");
-
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
 
-
-            System.out.println(backupFolder.getAbsolutePath());
-            System.out.println(k.getSucc());
-
-
-            File file = new File(backupFolder.getAbsolutePath() + "/file_" + k.getSucc());
+            File file = new File(backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString());
+            PrintMessage.i("lookup",
+                    backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString());
 
             Object o = null;
-            if(file.exists() && file.isFile()) {
+            if (file.exists() && file.isFile()) {
                 o = Files.readAllBytes(file.toPath());
             }
 
@@ -563,7 +590,8 @@ public class Node {
             PrintMessage.i("Put", "storing locally: k-" + key + " v-" + "");
 
             try {
-                FileOutputStream oos = new FileOutputStream(backupFolder.getAbsolutePath() + "/file_" + key.getSucc());
+                FileOutputStream oos = new FileOutputStream(
+                        backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString());
                 oos.write((byte[]) o);
                 oos.close();
             } catch (FileNotFoundException e) {
@@ -612,7 +640,8 @@ public class Node {
             // I should store this object
             PrintMessage.i("Del", "deleting locally: k-" + key + " v-" + "");
 
-            File file = new File(backupFolder.getAbsolutePath() + "/file_" + key.getSucc());
+            File file = new File(
+                    backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString());
             if (file.exists() && file.isFile()) {
                 file.delete();
             }
@@ -634,11 +663,10 @@ public class Node {
         }
     }
 
-
-	public void addFileNameKeyPair(String filename, OurFile ourFile) {
+    public void addFileNameKeyPair(String filename, OurFile ourFile) {
         this.fNameKeys.put(filename, ourFile);
     }
-    
+
     public void delFileNameKeyPair(String filename) {
         this.fNameKeys.remove(filename);
     }
