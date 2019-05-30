@@ -6,10 +6,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -540,9 +543,9 @@ public class Node {
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
 
-            File file = new File(backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString());
-            PrintMessage.i("lookup",
-                    backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString());
+            String filename = backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString();
+            File file = new File(filename);
+            PrintMessage.i("lookup", filename);
 
             Object o = null;
             if (file.exists() && file.isFile()) {
@@ -569,6 +572,55 @@ public class Node {
         return null;
     }
 
+    private boolean storeFileLocally(String pathname, byte[] data) {
+
+        try {
+            // create the file to store the data
+            File confFile = new File(pathname);
+
+            // Creates a random access file stream to read from
+            RandomAccessFile randomAccessStream = new RandomAccessFile(pathname, "rw");
+
+            // Create the buffer and channel
+            FileChannel outputFileChannel = randomAccessStream.getChannel();
+            ByteBuffer buf = ByteBuffer.allocate(2048);
+
+            // flush the data to the buffer and then to the channel (aka write to the file)
+            int remainingBytes = data.length;
+            while (remainingBytes > 0) {
+                // calculate the chunk size
+                int bytesToWrite = remainingBytes > 2048 ? 2048 : remainingBytes;
+                // write to the buffer
+                buf.put(data, data.length - remainingBytes, bytesToWrite);
+                // update remaining bytes left
+                remainingBytes -= bytesToWrite;
+                // write to the channel
+                try {
+                    buf.flip();
+                    outputFileChannel.write(buf);
+                } catch (IOException e) {
+                    PrintMessage.e("Backing up", String.format("Failed to store file chunk locally: %s", pathname));
+                    return false;
+                }
+                // mark buffer as ready for further writing (aka mark as empty)
+                buf.clear();
+            }
+
+            try {
+                randomAccessStream.close();
+                outputFileChannel.close();
+            } catch (IOException e) {
+                PrintMessage.e("Close streams", "Failed to close file channel");
+                return false;
+            }
+        } catch (FileNotFoundException e) {
+            PrintMessage.e("Create file", String.format("Failed to create local file %s for backup", pathname));
+            return false;
+        }
+
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     public boolean putObj(ChordKey key, Serializable o) {
         int k = key.getSucc();
@@ -588,21 +640,8 @@ public class Node {
             // I should store this object
             PrintMessage.i("Put", "storing locally: k-" + key + " v-" + "");
 
-            try {
-                FileOutputStream oos = new FileOutputStream(
-                        backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString());
-                oos.write((byte[]) o);
-                oos.close();
-            } catch (FileNotFoundException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (IOException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-            }
-
             // this.data.put(key, o);
-            return true;
+            return this.storeFileLocally(backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString(), (byte[]) o);
         } else {
             PrintMessage.i("Put", "storing remotly");
             // TODO someone else has to store it

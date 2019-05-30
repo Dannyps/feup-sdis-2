@@ -65,7 +65,6 @@ public class RMIListen implements RMIInterface {
                 // move the data from the buffer into the byte array
                 byte[] auxiliarBuf = new byte[2048];
                 buf.get(auxiliarBuf, 0, readBytes);
-                PrintMessage.i("it worked", "Read " + readBytes + " so far");
                 // append to fileContentStream
                 fileContentStream.write(auxiliarBuf, 0, readBytes);
                 // mark buffer as ready for further writing (aka mark as empty)
