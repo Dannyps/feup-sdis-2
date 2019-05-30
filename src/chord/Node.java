@@ -24,6 +24,7 @@ import javax.net.ssl.SSLSocketFactory;
 import message.KeyVal;
 import message.Message;
 import message.MessageType;
+import utils.OurFile;
 import utils.PrintMessage;
 
 public class Node {
@@ -39,7 +40,7 @@ public class Node {
 
     private File backupFolder;
     private File restoreFolder;
-    private ConcurrentHashMap<String, ChordKey> fNameKeys;
+    private ConcurrentHashMap<String, OurFile> fNameKeys;
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
@@ -47,7 +48,7 @@ public class Node {
         PrintMessage.i("Key", "My Chord Key is " + this.key.getSucc());
         this.fingerTable = new AtomicReferenceArray<>(m);
         this.data = new ConcurrentHashMap<ChordKey, Serializable>();
-        this.fNameKeys = new ConcurrentHashMap<String, ChordKey>();
+        this.fNameKeys = new ConcurrentHashMap<String, OurFile>();
         this.socket = createSocket(myId);
         if (peer != null) {
             PrintMessage.w("Join", "Joining " + peer.toString());
@@ -426,13 +427,21 @@ public class Node {
         int kSucc = k.getSucc();
         int mySucc = this.key.getSucc();
         int predSucc = new ChordKey(this.predecessor).getSucc();
+
+        System.out.println("here");
+
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
+
+
+            System.out.println(backupFolder.getAbsolutePath());
+            System.out.println(k.getSucc());
+
 
             File file = new File(backupFolder.getAbsolutePath() + "/file_" + k.getSucc());
 
             Object o = null;
-            if(file.exists()) {
+            if(file.exists() && file.isFile()) {
                 o = Files.readAllBytes(file.toPath());
             }
 
@@ -548,17 +557,17 @@ public class Node {
     }
 
 
-	public void addFileNameKeyPair(String filename, ChordKey key2) {
-        this.fNameKeys.put(filename, key2);
+	public void addFileNameKeyPair(String filename, OurFile ourFile) {
+        this.fNameKeys.put(filename, ourFile);
     }
     
-    public void delFileNameKeyPair(String filename, ChordKey key2) {
-        this.fNameKeys.remove(filename, key2);
+    public void delFileNameKeyPair(String filename) {
+        this.fNameKeys.remove(filename);
     }
     /**
      * @return the fNameKeys
      */
-    public ConcurrentHashMap<String, ChordKey> getfNameKeys() {
+    public ConcurrentHashMap<String, OurFile> getfNameKeys() {
         return fNameKeys;
     }
 

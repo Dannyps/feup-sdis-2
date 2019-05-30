@@ -39,8 +39,10 @@ public class TestApp {
 				break;
 			case "RESTORE":
 				restore(args);
+				break;
 			case "DELETE":
 				delete(args);
+				break;
 			case "STATE":
 				state();
 				break;

@@ -13,6 +13,7 @@ import java.rmi.server.UnicastRemoteObject;
 import chord.ChordKey;
 import chord.Node;
 import rmi.RMIInterface;
+import utils.OurFile;
 import utils.PrintMessage;
 
 /**
@@ -42,20 +43,28 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Boolean backup(String filename, int replicationDegree) throws RemoteException {
-
         File file = new File(filename);
-        byte[] content = null;
+        byte[] content = new byte[0];
+
         try {
             content = Files.readAllBytes(file.toPath());
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        ChordKey key = new ChordKey(filename);
-        boolean success = node.putObj(key, content);
-        if (success) {
-            this.node.addFileNameKeyPair(filename, key);
+
+        OurFile ourFile = new OurFile(filename, replicationDegree);
+
+        for(int i = 0 ; i < replicationDegree ; i++) {
+            String str = filename + "_" + i;
+            ChordKey key = new ChordKey(str);
+
+            boolean success = node.putObj(key, content);
+            if (success) {
+                ourFile.getFileDegreeKey().put(i, key);
+            }
         }
+        this.node.addFileNameKeyPair(filename, ourFile);
         return true;
     }
 
@@ -63,14 +72,17 @@ public class RMIListen implements RMIInterface {
     public Object restore(String filename) throws RemoteException {
         byte[] res;
         try {
-            res = (byte[]) node.getObj(node.getfNameKeys().get(filename));
-            FileOutputStream fos = new FileOutputStream(new File(node.getRestoreFolder().getAbsolutePath() + "/" + filename));
-            fos.write(res);
-            fos.close();
-
-            System.out.println(res);
-            // PrintMessage.i("GOT", res);
-            return res;
+            for(int i = 0 ; i < this.node.getfNameKeys().get(filename).getTotalReplicationDegree() ; i++) {
+                ChordKey k = this.node.getfNameKeys().get(filename).getFileDegreeKey().get(i);
+                res = (byte[]) node.getObj(k);
+                if(res != null) {
+                    FileOutputStream fos = new FileOutputStream(new File(this.node.getRestoreFolder().getAbsolutePath() + "/" + filename));
+                    fos.write(res);
+                    fos.close();
+                    PrintMessage.i("GOT", filename);
+                    return res;
+                }
+            }
         } catch (Exception e) {
             PrintMessage.e("RESTORE", "A requested file was not found.");
             System.exit(10);
@@ -80,10 +92,15 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Boolean delete(String filename) throws RemoteException {
-        ChordKey key = new ChordKey(filename);
-        boolean success = node.delObj(key);
-        if (success) {
-            this.node.delFileNameKeyPair(filename, key);
+        for(int i = 0 ; i < this.node.getfNameKeys().get(filename).getTotalReplicationDegree() ; i++) {
+            ChordKey key = this.node.getfNameKeys().get(filename).getFileDegreeKey().get(i);
+            boolean success = node.delObj(key);
+            if (success) {
+                this.node.getfNameKeys().get(filename).getFileDegreeKey().remove(i);
+            }
+        }
+        if(this.node.getfNameKeys().get(filename).getFileDegreeKey().size() == 0) {
+            this.node.delFileNameKeyPair(filename);
         }
         return true;
     }
@@ -96,7 +113,7 @@ public class RMIListen implements RMIInterface {
         };
 
         wrapper.res += "Backed up files:" + System.lineSeparator();
-        node.getfNameKeys().forEach((String s, ChordKey k) -> {
+        node.getfNameKeys().forEach((String s, OurFile k) -> {
             wrapper.res += s + System.lineSeparator();
         });
 
