@@ -50,4 +50,8 @@ public class AddrPort {
     public InetSocketAddress getInetSocketAddress(){
         return new InetSocketAddress(address, port);
     }
+
+    public static boolean compareHosts(InetSocketAddress h1, InetSocketAddress h2){
+        return h1.getPort() == h2.getPort() && h1.getAddress().getHostAddress().compareTo(h2.getAddress().getHostAddress()) == 0 ;
+    }
 }

@@ -13,5 +13,6 @@ public enum MessageType {
     CHORD_PUT,
     CHORD_DEL,
     CHORD_ANNOUNCE_PEER,
+    CHORD_BREATHE,
     CHORD_PREDECESSOR_HERE
 }
