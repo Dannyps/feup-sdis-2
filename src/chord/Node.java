@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Files;
+import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -25,6 +26,7 @@ import message.KeyVal;
 import message.Message;
 import message.MessageType;
 import utils.OurFile;
+import utils.AddrPort;
 import utils.PrintMessage;
 
 public class Node {
@@ -41,6 +43,7 @@ public class Node {
     private File backupFolder;
     private File restoreFolder;
     private ConcurrentHashMap<String, OurFile> fNameKeys;
+    private long lastBreathCaught = System.currentTimeMillis();
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
         this.myAddress = myId;
@@ -70,23 +73,47 @@ public class Node {
             }
         }).start();
 
+        new Thread(() -> {
+            beginBreathe();
+        }).start();
+
         createFolders();
+    }
+
+    private void beginBreathe() {
+        do {
+            if (System.currentTimeMillis() - this.lastBreathCaught > 10000 && this.getSuccessor() != null) {
+                try {
+                    Message<?> m = new Message<>(MessageType.CHORD_BREATHE);
+                    m.setRealSource(this.myAddress);
+                    this.write(this.getSuccessor(), m, false);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } while (true);
     }
 
     private void createFolders() {
 
         File peerFolder = new File("peer_" + key.getSucc());
-        if(!peerFolder.isDirectory() || !peerFolder.exists()) {
+        if (!peerFolder.isDirectory() || !peerFolder.exists()) {
             peerFolder.mkdir();
         }
 
         backupFolder = new File(peerFolder.getAbsolutePath() + "/backup");
-        if(!backupFolder.isDirectory() || !backupFolder.exists()) {
+        if (!backupFolder.isDirectory() || !backupFolder.exists()) {
             backupFolder.mkdir();
         }
 
         restoreFolder = new File(peerFolder.getAbsolutePath() + "/restore");
-        if(!restoreFolder.isDirectory() || !restoreFolder.exists()) {
+        if (!restoreFolder.isDirectory() || !restoreFolder.exists()) {
             restoreFolder.mkdir();
         }
     }
@@ -115,7 +142,8 @@ public class Node {
      * Sets the nth node in the local finger table
      */
     public void setNthFinger(int n, InetSocketAddress address) {
-        PrintMessage.w("Chord", "Setting finger at i=" + n + " -> " + address);
+        PrintMessage.w("Chord",
+                "Setting finger at i=" + n + " -> " + Integer.toString(new ChordKey(address).getSucc()));
         // if (n == 0) // successor
         // this.notify(address);
         fingerTable.set(n, address);
@@ -243,7 +271,7 @@ public class Node {
             switch (o.getMsgType()) {
             case CHORD_JOIN:
                 return handleJoin((Message<Integer>) o);
-            case CHORD_PUT:            
+            case CHORD_PUT:
                 return handlePut(o);
             case CHORD_DEL:
                 return handleDel(o);
@@ -254,6 +282,9 @@ public class Node {
                 return handlePredecessorHere(o);
             case CHORD_LOOKUP:
                 return handleGet(o);
+            case CHORD_BREATHE:
+                handleBreathe(o);
+                break;
             default:
                 break;
             }
@@ -263,6 +294,53 @@ public class Node {
         }
 
         return null;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private void handleBreathe(Message o) {
+        PrintMessage.i("Breathe", "It breathes. It is alive.");
+        this.lastBreathCaught = System.currentTimeMillis();
+        if (o.inHopList(this.myAddress)) {
+            PrintMessage.e("learn found me!", "");
+            learnNodes(o.getHopList());
+        }
+        if (o.inHopListTwice(this.getSuccessor())) {
+            // I'm breathing old air. I won't allow this!
+            PrintMessage.e("Breathe", "I'm breathing old air. I won't allow this!");
+            return;
+        }
+        try {
+            this.write(this.getSuccessor(), o, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void learnNodes(LinkedList<InetSocketAddress> hopList) {
+        // this.myaddress should occour twice in the hopList.
+        // All peers between these two occurences are in the chord ring.
+
+        LinkedList<InetSocketAddress> nList = new LinkedList<InetSocketAddress>();
+
+        boolean foundFirst = false;
+        for (var h : hopList) {
+            if (foundFirst && !nList.isEmpty() && AddrPort.compareHosts(h, this.myAddress)) {
+                break; // all nodes are added
+            }
+            if (foundFirst) {
+                nList.add(h);
+            }
+            if (AddrPort.compareHosts(h, this.myAddress)) {
+                foundFirst = true;
+            }
+        }
+        for (int i = 0; i < Node.m; i++) {
+            int res = (int) (Math.pow(2, i) % Math.pow(2, Node.m));
+            if (res >= nList.size())
+                break;
+            setNthFinger(i, nList.get(res - 1));
+        }
+
     }
 
     private Message<Boolean> handlePredecessorHere(Message<InetSocketAddress> o) {
@@ -329,7 +407,6 @@ public class Node {
         PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
         return new Message<Boolean>(MessageType.CHORD_ACK, success);
     }
-
 
     private Message<?> handlePut(Message<KeyVal> o) {
         PrintMessage.w("Received PUT", "with arg: " + o.getArg().getVal());
@@ -403,6 +480,7 @@ public class Node {
             ObjectOutputStream output = new ObjectOutputStream(sslSocket.getOutputStream());
             ((Message<?>) o).setSource(this.myAddress);
             ((Message<?>) o).setDestination(peer);
+            ((Message<?>) o).addToHopList(this.myAddress);
             if (response)
                 ((Message<?>) o).expectsResponse();
             output.writeObject(o);
@@ -496,7 +574,7 @@ public class Node {
                 e1.printStackTrace();
             }
 
-            //this.data.put(key, o);
+            // this.data.put(key, o);
             return true;
         } else {
             PrintMessage.i("Put", "storing remotly");
@@ -535,10 +613,10 @@ public class Node {
             PrintMessage.i("Del", "deleting locally: k-" + key + " v-" + "");
 
             File file = new File(backupFolder.getAbsolutePath() + "/file_" + key.getSucc());
-            if(file.exists() && file.isFile()) {
+            if (file.exists() && file.isFile()) {
                 file.delete();
             }
-            //this.data.put(key, o);
+            // this.data.put(key, o);
             return true;
         } else {
             PrintMessage.i("Del", "deleting remotly");
@@ -564,6 +642,7 @@ public class Node {
     public void delFileNameKeyPair(String filename) {
         this.fNameKeys.remove(filename);
     }
+
     /**
      * @return the fNameKeys
      */

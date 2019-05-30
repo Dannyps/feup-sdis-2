@@ -1,8 +1,11 @@
 package message;
 
-import message.MessageType;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
+import java.util.LinkedList;
+
+import utils.AddrPort;
+import utils.PrintMessage;
 
 public class Message<T extends Serializable> implements Serializable {
     private static final long serialVersionUID = -8006817488241702192L;
@@ -18,7 +21,14 @@ public class Message<T extends Serializable> implements Serializable {
     private T arg = null;
 
     /**
-     * filled by the sender contains the port to where responses should be sent.
+     * filled by the FIRST sender.
+     */
+    private InetSocketAddress firstSource = null;
+
+    /**
+     * filled by the sender
+     * 
+     * contains the port to where responses should be sent.
      */
     private InetSocketAddress source = null;
 
@@ -29,6 +39,8 @@ public class Message<T extends Serializable> implements Serializable {
 
     /**
      * filled by the receiver
+     * 
+     * contains the InetSocketAddress as seen from the receiver.
      */
     private InetSocketAddress realSource = null;
 
@@ -36,6 +48,8 @@ public class Message<T extends Serializable> implements Serializable {
      * wether the sender expects a response
      */
     private boolean response = false;
+
+    private LinkedList<InetSocketAddress> hopList = new LinkedList<InetSocketAddress>();
 
     /**
      * Constructs a new serializable message
@@ -58,7 +72,6 @@ public class Message<T extends Serializable> implements Serializable {
     public MessageType getMsgType() {
         return msgType;
     }
-
 
     /**
      * @return the arg
@@ -86,6 +99,20 @@ public class Message<T extends Serializable> implements Serializable {
      */
     public InetSocketAddress getRealSource() {
         return realSource;
+    }
+
+    /**
+     * @param firstSource the firstSource to set
+     */
+    public void setFirstSource(InetSocketAddress firstSource) {
+        this.firstSource = firstSource;
+    }
+
+    /**
+     * @return the firstSource
+     */
+    public InetSocketAddress getFirstSource() {
+        return firstSource;
     }
 
     /**
@@ -147,4 +174,32 @@ public class Message<T extends Serializable> implements Serializable {
     public void doesNotExpectResponse() {
         this.response = false;
     }
+
+    /**
+     * @return the hopList
+     */
+    public LinkedList<InetSocketAddress> getHopList() {
+        return hopList;
+    }
+
+    /**
+     * @param hopList the hopList to set
+     */
+    public boolean addToHopList(InetSocketAddress host) {
+        return this.hopList.add(host);
+    }
+
+    public boolean inHopListTwice(InetSocketAddress host) {
+        int count = 0;
+        for (InetSocketAddress h : this.hopList) {
+            if (AddrPort.compareHosts(h, host))
+                count++;
+        }
+        return count >= 2;
+    }
+
+    public boolean inHopList(InetSocketAddress host) {
+        return this.hopList.contains(host);
+    }
+
 }
