@@ -81,8 +81,6 @@ public class Node {
 
     private void beginBreathe() {
         do {
-            PrintMessage.d("breathe", System.currentTimeMillis() + " - " + this.lastBreathCaught + " = "
-                    + Long.toString(System.currentTimeMillis() - this.lastBreathCaught));
             if (System.currentTimeMillis() - this.lastBreathCaught > 10000 && this.getSuccessor() != null) {
                 try {
                     Message<?> m = new Message<>(MessageType.CHORD_BREATHE);
@@ -143,7 +141,8 @@ public class Node {
      * Sets the nth node in the local finger table
      */
     public void setNthFinger(int n, InetSocketAddress address) {
-        PrintMessage.w("Chord", "Setting finger at i=" + n + " -> " + new ChordKey(address));
+        PrintMessage.w("Chord",
+                "Setting finger at i=" + n + " -> " + Integer.toString(new ChordKey(address).getSucc()));
         // if (n == 0) // successor
         // this.notify(address);
         fingerTable.set(n, address);
@@ -334,16 +333,13 @@ public class Node {
                 foundFirst = true;
             }
         }
-        PrintMessage.d("nList", nList.toString());
         for (int i = 0; i < Node.m; i++) {
             int res = (int) (Math.pow(2, i) % Math.pow(2, Node.m));
             if (res >= nList.size())
                 break;
-//            PrintMessage.d("ft", "would set i:" + i + " with " + Integer.toString(res - 1));
             setNthFinger(i, nList.get(res - 1));
         }
 
-        PrintMessage.d("Learn", Integer.toString(nList.size()));
     }
 
     private Message<Boolean> handlePredecessorHere(Message<InetSocketAddress> o) {
