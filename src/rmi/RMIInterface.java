@@ -8,7 +8,7 @@ public interface RMIInterface extends Remote {
 
     Object restore(String filename) throws RemoteException;
 
-    int delete(String filename) throws RemoteException;
+    Boolean delete(String filename) throws RemoteException;
 
     String info() throws RemoteException;
 

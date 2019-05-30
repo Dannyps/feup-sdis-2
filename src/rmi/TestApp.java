@@ -39,8 +39,10 @@ public class TestApp {
 				break;
 			case "RESTORE":
 				restore(args);
-				case "STATE":
-			state();
+			case "DELETE":
+				delete(args);
+			case "STATE":
+				state();
 				break;
 			/*
 			 * case "RESTORE": restore(stub, args); break; case "DELETE": delete(stub,
@@ -116,6 +118,27 @@ public class TestApp {
 		}
 		if (b != null) {
 			PrintMessage.i("Response", b.toString());
+		}
+		return true;
+	}
+
+	private Boolean delete(String[] args) {
+		Boolean b = false;
+		try {
+			b = stub.delete(args[2]);
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ArrayIndexOutOfBoundsException e) {
+			PrintMessage.e("Error", "delete usage: java rmi.TestApp DELETE <filename>");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if (b) {
+			PrintMessage.i("Success", "The delete thread has been launched successfully.");
 		}
 		return true;
 	}

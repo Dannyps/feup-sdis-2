@@ -79,8 +79,13 @@ public class RMIListen implements RMIInterface {
     }
 
     @Override
-    public int delete(String filename) throws RemoteException {
-        return 0;
+    public Boolean delete(String filename) throws RemoteException {
+        ChordKey key = new ChordKey(filename);
+        boolean success = node.delObj(key);
+        if (success) {
+            this.node.delFileNameKeyPair(filename, key);
+        }
+        return true;
     }
 
     @Override

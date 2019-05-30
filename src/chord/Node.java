@@ -242,8 +242,10 @@ public class Node {
             switch (o.getMsgType()) {
             case CHORD_JOIN:
                 return handleJoin((Message<Integer>) o);
-            case CHORD_PUT:
+            case CHORD_PUT:            
                 return handlePut(o);
+            case CHORD_DEL:
+                return handleDel(o);
             case CHORD_ANNOUNCE_PEER:
                 handleAnnouncePeer(o);
                 break;
@@ -318,6 +320,15 @@ public class Node {
     private static boolean keyInBetween(int k, int a, int b) {
         return (a > b && (k > a || k < b)) || (a < k && k <= b);
     }
+
+    private Message<?> handleDel(Message<KeyVal> o) {
+        PrintMessage.w("Received DEL", "with arg: " + o.getArg().getVal());
+        PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
+        boolean success = delObj(o.getArg().getKey());
+        PrintMessage.w("Data", "Internal data contains " + data.size() + " entries.");
+        return new Message<Boolean>(MessageType.CHORD_ACK, success);
+    }
+
 
     private Message<?> handlePut(Message<KeyVal> o) {
         PrintMessage.w("Received PUT", "with arg: " + o.getArg().getVal());
@@ -495,10 +506,55 @@ public class Node {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public boolean delObj(ChordKey key) {
+        int k = key.getSucc();
+        int m = this.key.getSucc();
+
+        int a = new ChordKey(this.predecessor).getSucc();
+        boolean deleteLocally = false;
+
+        if (this.getSuccessor() == null) {
+            // this node does not have a successor... There is no network yet.
+            deleteLocally = true;
+        } else {
+            PrintMessage.d("PutObj", String.format("kSucc: %d mySucc: %d preSucc: %d", k, m, a));
+            a = new ChordKey(this.predecessor).getSucc();
+        }
+        if (deleteLocally || keyInBetween(k, a, m)) {
+            // I should store this object
+            PrintMessage.i("Del", "deleting locally: k-" + key + " v-" + "");
+
+            File file = new File(backupFolder.getAbsolutePath() + "/file_" + key.getSucc());
+            if(file.exists() && file.isFile()) {
+                file.delete();
+            }
+            //this.data.put(key, o);
+            return true;
+        } else {
+            PrintMessage.i("Del", "deleting remotly");
+            // TODO someone else has to store it
+            Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_DEL, new KeyVal(key, key.getSucc()));
+            try {
+                Message<Boolean> response = (Message<Boolean>) write(this.getSuccessor(), message, true);
+                PrintMessage.w("DEL", "Received " + response.getArg() + "after deleting remotly.");
+                return response.getArg();
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            return false;
+        }
+    }
+
+
 	public void addFileNameKeyPair(String filename, ChordKey key2) {
         this.fNameKeys.put(filename, key2);
     }
     
+    public void delFileNameKeyPair(String filename, ChordKey key2) {
+        this.fNameKeys.remove(filename, key2);
+    }
     /**
      * @return the fNameKeys
      */

@@ -11,6 +11,7 @@ public enum MessageType {
     CHORD_ACK,
     CHORD_LOOKUP,
     CHORD_PUT,
+    CHORD_DEL,
     CHORD_ANNOUNCE_PEER,
     CHORD_PREDECESSOR_HERE
 }
