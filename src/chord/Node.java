@@ -48,6 +48,9 @@ public class Node {
     private long lastBreathCaught = System.currentTimeMillis();
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            leaveChord();
+        }));
         this.myAddress = myId;
         this.key = new ChordKey(this.myAddress);
         PrintMessage.i("Key", "My Chord Key is " + this.key.getSucc());
@@ -82,13 +85,25 @@ public class Node {
         createFolders();
     }
 
+    private void leaveChord() {
+        PrintMessage.e("Leave", "Shutting down gracefully.");
+        this.executor.shutdown();
+        try {
+            Message s1 = this.write(this.predecessor, new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), false);
+            if(s1.getMsgType()==MessageType.CHORD_ACK){
+                // success
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private void beginBreathe() {
         do {
             if (System.currentTimeMillis() - this.lastBreathCaught > 10000 && this.getSuccessor() != null) {
                 try {
-                    Message<?> m = new Message<>(MessageType.CHORD_BREATHE);
-                    m.setRealSource(this.myAddress);
-                    this.write(this.getSuccessor(), m, false);
+                    breathe();
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -100,6 +115,12 @@ public class Node {
                 e.printStackTrace();
             }
         } while (true);
+    }
+
+    private void breathe() throws Exception {
+        Message<?> m = new Message<>(MessageType.CHORD_BREATHE);
+        m.setRealSource(this.myAddress);
+        this.write(this.getSuccessor(), m, false);
     }
 
     private void createFolders() {
@@ -287,6 +308,8 @@ public class Node {
             case CHORD_BREATHE:
                 handleBreathe(o);
                 break;
+            case CHORD_LEAVING:
+                return handleLeaving(o);
             default:
                 break;
             }
@@ -296,6 +319,18 @@ public class Node {
         }
 
         return null;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private Message handleLeaving(Message<InetSocketAddress> o) {
+        this.setNthFinger(0, o.getArg());
+        try {
+            breathe();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new Message<>(MessageType.CHORD_ACK);
+
     }
 
     @SuppressWarnings("rawtypes")
@@ -342,6 +377,9 @@ public class Node {
                 break;
             setNthFinger(i, nList.get(res - 1));
         }
+
+        // update prededessor
+        this.predecessor = nList.getLast();
 
     }
 
