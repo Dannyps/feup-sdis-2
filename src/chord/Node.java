@@ -49,6 +49,9 @@ public class Node {
     private long lastBreathCaught = System.currentTimeMillis();
 
     public Node(InetSocketAddress myId, InetSocketAddress peer) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            leaveChord();
+        }));
         this.myAddress = myId;
         this.key = new ChordKey(this.myAddress);
         PrintMessage.i("Key", "My Chord Key is " + this.key.getSucc());
@@ -120,13 +123,29 @@ public class Node {
         }
     }
 
+    private void leaveChord() {
+        PrintMessage.e("Leave", "Shutting down gracefully.");
+        try {
+            Message s1 = this.write(this.predecessor,
+                    new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), true);
+            if (s1 != null && s1.getMsgType() == MessageType.CHORD_ACK) {
+                // success
+                PrintMessage.i("Leave", "The chord network has ignored me. Time to launch the last backups.");
+                // for each key putObj(key, o)
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        this.executor.shutdown();
+    }
+
     private void beginBreathe() {
         do {
             if (System.currentTimeMillis() - this.lastBreathCaught > 10000 && this.getSuccessor() != null) {
                 try {
-                    Message<?> m = new Message<>(MessageType.CHORD_BREATHE);
-                    m.setRealSource(this.myAddress);
-                    this.write(this.getSuccessor(), m, false);
+                    breathe();
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -138,6 +157,12 @@ public class Node {
                 e.printStackTrace();
             }
         } while (true);
+    }
+
+    private void breathe() throws Exception {
+        Message<?> m = new Message<>(MessageType.CHORD_BREATHE);
+        m.setRealSource(this.myAddress);
+        this.write(this.getSuccessor(), m, false);
     }
 
     private void createFolders() {
@@ -182,10 +207,9 @@ public class Node {
      * Sets the nth node in the local finger table
      */
     public void setNthFinger(int n, InetSocketAddress address) {
-        PrintMessage.w("Chord",
-                "Setting finger at i=" + n + " -> " + Integer.toString(new ChordKey(address).getSucc()));
-        // if (n == 0) // successor
-        // this.notify(address);
+        if (address != null)
+            PrintMessage.w("Chord",
+                    "Setting finger at i=" + n + " -> " + Integer.toString(new ChordKey(address).getSucc()));
         fingerTable.set(n, address);
     }
 
@@ -325,6 +349,8 @@ public class Node {
             case CHORD_BREATHE:
                 handleBreathe(o);
                 break;
+            case CHORD_LEAVING:
+                return handleLeaving(o);
             default:
                 break;
             }
@@ -334,6 +360,25 @@ public class Node {
         }
 
         return null;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private Message handleLeaving(Message<InetSocketAddress> o) {
+        if (AddrPort.compareHosts(o.getArg(), this.myAddress)) {
+            // would set self as successor. It shall be set as null,
+            // because the only other peer in the cord network is going away.
+            setNthFinger(0, null);
+            this.predecessor = null;
+        } else {
+            this.setNthFinger(0, o.getArg());
+        }
+        try {
+            breathe();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new Message<>(MessageType.CHORD_ACK);
+
     }
 
     @SuppressWarnings("rawtypes")
@@ -380,6 +425,9 @@ public class Node {
                 break;
             setNthFinger(i, nList.get(res - 1));
         }
+
+        // update prededessor
+        this.predecessor = nList.getLast();
 
     }
 
@@ -510,14 +558,14 @@ public class Node {
      */
     private void relocateData(ChordKey ppk, ChordKey pk) {
         File[] directoryListing = this.backupFolder.listFiles();
-        PrintMessage.d("REALLOCATION", "entered. " + Integer.toString(directoryListing.length) + " files found.");
+        PrintMessage.d("Relocation", "entered. " + Integer.toString(directoryListing.length) + " files found.");
         for (var f : directoryListing) {
             ChordKey k = new ChordKey(f.getName().split(FILE_PREFIX)[1]);
             if (keyInBetween(k, ppk, pk)) {
                 try {
                     boolean success = putObj(k, Files.readAllBytes(f.toPath()));
                     if (success) {
-                        PrintMessage.d("REALLOCATION", "deleting " + f.getName());
+                        PrintMessage.d("Relocation", "deleting " + f.getName());
                         f.delete();
                     }
                 } catch (IOException e) {
@@ -542,6 +590,10 @@ public class Node {
             sslSocket = (SSLSocket) sslSocketFactory.createSocket(peer.getAddress(), peer.getPort());
         } catch (IOException e) {
             PrintMessage.e("FATAL", "could not write message to peer " + peer.toString());
+            e.printStackTrace();
+        } catch (NullPointerException e) {
+            PrintMessage.e("FATAL", "Could not write to null peer!");
+            return null;
         }
 
         sslSocket.setEnabledCipherSuites(sslSocket.getSupportedCipherSuites());
