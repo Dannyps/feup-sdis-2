@@ -51,6 +51,12 @@ public class AddrPort {
         return new InetSocketAddress(address, port);
     }
 
+    /**
+     * 
+     * @param h1
+     * @param h2
+     * @return true if ip and port match, false otherwise
+     */
     public static boolean compareHosts(InetSocketAddress h1, InetSocketAddress h2){
         return h1.getPort() == h2.getPort() && h1.getAddress().getHostAddress().compareTo(h2.getAddress().getHostAddress()) == 0 ;
     }

@@ -88,17 +88,18 @@ public class Node {
     private void leaveChord() {
         PrintMessage.e("Leave", "Shutting down gracefully.");
         try {
-            Message s1 = this.write(this.predecessor, new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), true);
-            if(s1 != null && s1.getMsgType()==MessageType.CHORD_ACK){
+            Message s1 = this.write(this.predecessor,
+                    new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), true);
+            if (s1 != null && s1.getMsgType() == MessageType.CHORD_ACK) {
                 // success
                 PrintMessage.i("Leave", "The chord network has ignored me. Time to launch the last backups.");
                 // for each key putObj(key, o)
-                
+
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        
+
         this.executor.shutdown();
     }
 
@@ -168,10 +169,9 @@ public class Node {
      * Sets the nth node in the local finger table
      */
     public void setNthFinger(int n, InetSocketAddress address) {
-        PrintMessage.w("Chord",
-                "Setting finger at i=" + n + " -> " + Integer.toString(new ChordKey(address).getSucc()));
-        // if (n == 0) // successor
-        // this.notify(address);
+        if (address != null)
+            PrintMessage.w("Chord",
+                    "Setting finger at i=" + n + " -> " + Integer.toString(new ChordKey(address).getSucc()));
         fingerTable.set(n, address);
     }
 
@@ -326,7 +326,14 @@ public class Node {
 
     @SuppressWarnings("rawtypes")
     private Message handleLeaving(Message<InetSocketAddress> o) {
-        this.setNthFinger(0, o.getArg());
+        if (AddrPort.compareHosts(o.getArg(), this.myAddress)) {
+            // would set self as successor. It shall be set as null,
+            // because the only other peer in the cord network is going away.
+            setNthFinger(0, null);
+            this.predecessor = null;
+        } else {
+            this.setNthFinger(0, o.getArg());
+        }
         try {
             breathe();
         } catch (Exception e) {
@@ -546,7 +553,7 @@ public class Node {
         } catch (IOException e) {
             PrintMessage.e("FATAL", "could not write message to peer " + peer.toString());
             e.printStackTrace();
-        } catch (NullPointerException e){
+        } catch (NullPointerException e) {
             PrintMessage.e("FATAL", "Could not write to null peer!");
             return null;
         }
