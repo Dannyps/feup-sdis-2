@@ -676,20 +676,24 @@ public class Node {
             // this.data.put(key, o);
             return FileSystemNIO.storeLocalFile(backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString(), (byte[]) o);
         } else {
-            PrintMessage.i("Put", "storing remotly");
-            // TODO someone else has to store it
-            Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_PUT, new KeyVal(key, o));
-            try {
-                Message<Boolean> response = (Message<Boolean>) write(this.getSuccessor(), message, true);
-                PrintMessage.w("PUT", "Received " + response.getArg() + "after storing remotly.");
-                return response.getArg();
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            return false;
+            return putObjRemote(key, o);
 
         }
+    }
+
+    private boolean putObjRemote(ChordKey key, Serializable o) {
+        PrintMessage.i("Put", "storing remotly");
+        // TODO someone else has to store it
+        Message<KeyVal> message = new Message<KeyVal>(MessageType.CHORD_PUT, new KeyVal(key, o));
+        try {
+            Message<Boolean> response = (Message<Boolean>) write(this.getSuccessor(), message, true);
+            PrintMessage.w("PUT", "Received " + response.getArg() + "after storing remotly.");
+            return response.getArg();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")
