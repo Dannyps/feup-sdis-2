@@ -87,16 +87,19 @@ public class Node {
 
     private void leaveChord() {
         PrintMessage.e("Leave", "Shutting down gracefully.");
-        this.executor.shutdown();
         try {
-            Message s1 = this.write(this.predecessor, new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), false);
-            if(s1.getMsgType()==MessageType.CHORD_ACK){
+            Message s1 = this.write(this.predecessor, new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), true);
+            if(s1 != null && s1.getMsgType()==MessageType.CHORD_ACK){
                 // success
+                PrintMessage.i("Leave", "The chord network has ignored me. Time to launch the last backups.");
+                // for each key putObj(key, o)
+                
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        
+        this.executor.shutdown();
     }
 
     private void beginBreathe() {
@@ -510,14 +513,14 @@ public class Node {
      */
     private void relocateData(ChordKey ppk, ChordKey pk) {
         File[] directoryListing = this.backupFolder.listFiles();
-        PrintMessage.d("REALLOCATION", "entered. " + Integer.toString(directoryListing.length) + " files found.");
+        PrintMessage.d("Relocation", "entered. " + Integer.toString(directoryListing.length) + " files found.");
         for (var f : directoryListing) {
             ChordKey k = new ChordKey(f.getName().split(FILE_PREFIX)[1]);
             if (keyInBetween(k, ppk, pk)) {
                 try {
                     boolean success = putObj(k, Files.readAllBytes(f.toPath()));
                     if (success) {
-                        PrintMessage.d("REALLOCATION", "deleting " + f.getName());
+                        PrintMessage.d("Relocation", "deleting " + f.getName());
                         f.delete();
                     }
                 } catch (IOException e) {
@@ -542,6 +545,10 @@ public class Node {
             sslSocket = (SSLSocket) sslSocketFactory.createSocket(peer.getAddress(), peer.getPort());
         } catch (IOException e) {
             PrintMessage.e("FATAL", "could not write message to peer " + peer.toString());
+            e.printStackTrace();
+        } catch (NullPointerException e){
+            PrintMessage.e("FATAL", "Could not write to null peer!");
+            return null;
         }
 
         sslSocket.setEnabledCipherSuites(sslSocket.getSupportedCipherSuites());
