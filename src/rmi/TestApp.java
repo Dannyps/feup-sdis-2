@@ -114,7 +114,7 @@ public class TestApp {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ArrayIndexOutOfBoundsException e) {
-			PrintMessage.e("Error", "backup usage: java rmi.TestApp BACKUP <filename> <replication_degree>");
+			PrintMessage.e("Error", "restore usage: java rmi.TestApp RESTORE <filename>");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

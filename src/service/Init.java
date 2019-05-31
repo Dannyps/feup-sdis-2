@@ -35,6 +35,12 @@ public class Init {
 						+ mySocket.getAddress().toString().substring(1) + ":" + mySocket.getPort() + " as peer.");
 				Node n = new Node(mySocket);
 				new RMIListen(n);
+				Runtime.getRuntime().addShutdownHook(new Thread(new Runnable(){
+					@Override
+					public void run() {
+						n.writeData();
+					}
+				}));
 			} else {
 				// I got an IP address. I must connect to it and join their chord.
 				PrintMessage.i("Info", "Joining the specified chord network.");
@@ -42,6 +48,12 @@ public class Init {
 					AddrPort peer = new AddrPort(argv[1]);
 					Node n = new Node(mySocket, peer.getInetSocketAddress());
 					new RMIListen(n);
+					Runtime.getRuntime().addShutdownHook(new Thread(new Runnable(){
+						@Override
+						public void run() {
+							n.writeData();
+						}
+					}));
 				} catch (Exception e) {
 					PrintMessage.e("FATAL", "The passed address is not valid.");
 					e.printStackTrace();
@@ -49,6 +61,7 @@ public class Init {
 				}
 			}
 		}
+
 	}
 
 	/**

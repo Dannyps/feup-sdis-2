@@ -16,7 +16,7 @@ public class PrintMessage {
     // }
 
     /**
-     * print info
+     * @brief Print info
      * 
      * @param action
      * @param m
@@ -26,7 +26,7 @@ public class PrintMessage {
     }
 
     /**
-     * print error
+     * @brief Print error
      * 
      * @param action
      * @param m
@@ -36,7 +36,7 @@ public class PrintMessage {
     }
 
     /**
-     * print success
+     * @brief Print success
      * 
      * @param action
      * @param m
@@ -46,7 +46,7 @@ public class PrintMessage {
     }
 
     /**
-     * print warning
+     * @brief print warning
      * 
      * @param action
      * @param m

@@ -1,13 +1,13 @@
 package chord;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Files;
@@ -29,6 +29,7 @@ import message.MessageType;
 import utils.OurFile;
 import utils.AddrPort;
 import utils.PrintMessage;
+import utils.FileSystemNIO;
 
 public class Node {
     public final static int m = 14;
@@ -83,6 +84,43 @@ public class Node {
         }).start();
 
         createFolders();
+
+        readData();
+    }
+
+    public void writeData() {
+        File file = new File("peer_" + key.getSucc() + File.separator + "data_peer_" + key.getSucc());
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
+            oos.writeObject(fNameKeys);
+            oos.close();
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private void readData() {
+        File file = new File("peer_" + key.getSucc() + File.separator + "data_peer_" + key.getSucc());
+        if (file.exists() && file.isFile()) {
+            try {
+                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+                this.fNameKeys = (ConcurrentHashMap<String, OurFile>) ois.readObject();
+                ois.close();
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
     }
 
     private void leaveChord() {
@@ -592,15 +630,10 @@ public class Node {
         if (keyInBetween(kSucc, predSucc, mySucc)) {
             // I should have this object
 
-            File file = new File(backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString());
-            PrintMessage.i("lookup",
-                    backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString());
+            String filename = backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + k.getKey().toString();
+            PrintMessage.i("lookup", filename);
 
-            Object o = null;
-            if (file.exists() && file.isFile()) {
-                o = Files.readAllBytes(file.toPath());
-            }
-
+            Object o = FileSystemNIO.loadLocalFile(filename);
             if (o == null) {
                 throw new Exception("value not found");
             }
@@ -640,21 +673,8 @@ public class Node {
             // I should store this object
             PrintMessage.i("Put", "storing locally: k-" + key + " v-" + "");
 
-            try {
-                FileOutputStream oos = new FileOutputStream(
-                        backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString());
-                oos.write((byte[]) o);
-                oos.close();
-            } catch (FileNotFoundException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (IOException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-            }
-
             // this.data.put(key, o);
-            return true;
+            return FileSystemNIO.storeLocalFile(backupFolder.getAbsolutePath() + File.separator + FILE_PREFIX + key.getKey().toString(), (byte[]) o);
         } else {
             PrintMessage.i("Put", "storing remotly");
             // TODO someone else has to store it

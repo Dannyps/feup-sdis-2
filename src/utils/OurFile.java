@@ -1,6 +1,7 @@
 package utils;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -11,7 +12,7 @@ import java.util.concurrent.ExecutionException;
 
 import chord.ChordKey;
 
-public class OurFile {
+public class OurFile implements Serializable {
     String filename;
     int totalReplicationDegree;
 
