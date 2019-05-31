@@ -130,8 +130,15 @@ public class Node {
                     new Message<InetSocketAddress>(MessageType.CHORD_LEAVING, this.getSuccessor()), true);
             if (s1 != null && s1.getMsgType() == MessageType.CHORD_ACK) {
                 // success
+                Thread.sleep(5000);
                 PrintMessage.i("Leave", "The chord network has ignored me. Time to launch the last backups.");
+                File[] directoryListing = this.backupFolder.listFiles();
                 // for each key putObj(key, o)
+                for (var f : directoryListing) {
+                    ChordKey k = new ChordKey(f.getName().split(FILE_PREFIX)[1]);
+                    putObjRemote(k, Files.readAllBytes(f.toPath()));
+                    f.delete();
+                }
 
             }
         } catch (Exception e) {
