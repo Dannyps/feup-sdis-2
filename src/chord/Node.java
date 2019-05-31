@@ -1,6 +1,9 @@
 package chord;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -78,6 +81,43 @@ public class Node {
         }).start();
 
         createFolders();
+
+        readData();
+    }
+
+    public void writeData() {
+        File file = new File("peer_" + key.getSucc() + File.separator + "data_peer_" + key.getSucc());
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
+            oos.writeObject(fNameKeys);
+            oos.close();
+        } catch (FileNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private void readData() {
+        File file = new File("peer_" + key.getSucc() + File.separator + "data_peer_" + key.getSucc());
+        if (file.exists() && file.isFile()) {
+            try {
+                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+                this.fNameKeys = (ConcurrentHashMap<String, OurFile>) ois.readObject();
+                ois.close();
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
     }
 
     private void beginBreathe() {
