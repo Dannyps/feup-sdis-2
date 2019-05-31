@@ -2,8 +2,6 @@ package service;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -13,6 +11,7 @@ import java.rmi.server.UnicastRemoteObject;
 import chord.ChordKey;
 import chord.Node;
 import rmi.RMIInterface;
+import utils.FileSystemNIO;
 import utils.OurFile;
 import utils.PrintMessage;
 
@@ -43,22 +42,16 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Boolean backup(String filename, int replicationDegree) throws RemoteException {
-        File file = new File(filename);
-        byte[] content = new byte[0];
+        byte[] fileContent = FileSystemNIO.loadLocalFile(filename);
 
-        try {
-            content = Files.readAllBytes(file.toPath());
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-
+        // request peers in the chord network to store the file
+        // attempt to meet the desired replication degree
         OurFile ourFile = new OurFile(filename, replicationDegree);
 
         for(int i = 0 ; i < replicationDegree ; i++) {
             ChordKey key = new ChordKey(filename, i);
 
-            boolean success = node.putObj(key, content);
+            boolean success = node.putObj(key, fileContent);
             if (success) {
                 ourFile.getFileDegreeKey().put(i, key);
             } else {
@@ -93,14 +86,14 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Boolean delete(String filename) throws RemoteException {
-        for(int i = 0 ; i < this.node.getfNameKeys().get(filename).getTotalReplicationDegree() ; i++) {
+        for (int i = 0; i < this.node.getfNameKeys().get(filename).getTotalReplicationDegree(); i++) {
             ChordKey key = this.node.getfNameKeys().get(filename).getFileDegreeKey().get(i);
             boolean success = node.delObj(key);
             if (success) {
                 this.node.getfNameKeys().get(filename).getFileDegreeKey().remove(i);
             }
         }
-        if(this.node.getfNameKeys().get(filename).getFileDegreeKey().size() == 0) {
+        if (this.node.getfNameKeys().get(filename).getFileDegreeKey().size() == 0) {
             this.node.delFileNameKeyPair(filename);
         }
         return true;
@@ -110,7 +103,7 @@ public class RMIListen implements RMIInterface {
     public String info() throws RemoteException {
         // get State
         var wrapper = new Object() {
-            public String res ="";
+            public String res = "";
         };
 
         wrapper.res += "Backed up files:" + System.lineSeparator();
