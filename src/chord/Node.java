@@ -179,7 +179,6 @@ public class Node {
             this.predecessor = response.getSource();
         } catch (Exception e) {
             PrintMessage.e("Error", "The specified peer is not reachable.");
-            e.printStackTrace();
             System.exit(5);
         }
         PrintMessage.s("Join", "Join message sent successfully.");
@@ -242,9 +241,10 @@ public class Node {
     public void read() {
         SSLSocket ssls;
         while (true) {
+            SocketAddress addr = null;
             try { // waiting for connections
                 ssls = (SSLSocket) this.socket.accept();
-                SocketAddress addr = ssls.getRemoteSocketAddress();
+                addr = ssls.getRemoteSocketAddress();
                 ObjectInputStream ois = new ObjectInputStream(ssls.getInputStream());
                 Message o = (Message) ois.readObject();
                 o.setRealSource((InetSocketAddress) addr);
@@ -258,8 +258,8 @@ public class Node {
                 }
                 ssls.close();
             } catch (IOException | ClassNotFoundException e) {
-                PrintMessage.e("Error", e.getMessage());
-                e.printStackTrace();
+                PrintMessage.e("Error",
+                        e.getMessage() + " received from " + addr.toString() + ". The message has been dropped.");
             }
         }
     }
@@ -517,8 +517,7 @@ public class Node {
                 ((Message<?>) o).expectsResponse();
             output.writeObject(o);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            PrintMessage.e("Protocol Mismatch", "Could not interpret the received message!");
         }
 
         if (!response) {
