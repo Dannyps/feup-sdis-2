@@ -72,7 +72,7 @@ A previously backed up file can be removed from the Chord Network using the dele
 
 ### State
 
-In order to view the state of the peer, such which files were backed up, run the state service.
+In order to view the state of the peer, such as which files were backed up, run the state service.
 
 ```bash
 ./run_app.sh state <RMI_ID>
