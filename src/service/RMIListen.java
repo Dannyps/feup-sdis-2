@@ -1,13 +1,7 @@
 package service;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -17,6 +11,7 @@ import java.rmi.server.UnicastRemoteObject;
 import chord.ChordKey;
 import chord.Node;
 import rmi.RMIInterface;
+import utils.FileSystemNIO;
 import utils.OurFile;
 import utils.PrintMessage;
 
@@ -47,44 +42,7 @@ public class RMIListen implements RMIInterface {
 
     @Override
     public Boolean backup(String filename, int replicationDegree) throws RemoteException {
-        // hacky way to create a dynamic array of byte
-        ByteArrayOutputStream fileContentStream = new ByteArrayOutputStream();
-        byte[] fileContent;
-        try {
-            // Creates a random access file stream to read from
-            RandomAccessFile randomAccessStream = new RandomAccessFile(filename, "r");
-            FileChannel inputFileChannel = randomAccessStream.getChannel();
-            ByteBuffer buf = ByteBuffer.allocate(2048);
-
-            // while it doen't reach end of stream, read from the file channel into byte
-            // buffer
-            int readBytes;
-            while ((readBytes = inputFileChannel.read(buf)) != -1) {
-                // flip buffer from writing mode to reading mode
-                buf.flip();
-                // move the data from the buffer into the byte array
-                byte[] auxiliarBuf = new byte[2048];
-                buf.get(auxiliarBuf, 0, readBytes);
-                // append to fileContentStream
-                fileContentStream.write(auxiliarBuf, 0, readBytes);
-                // mark buffer as ready for further writing (aka mark as empty)
-                buf.clear();
-            }
-
-            // close all streams
-            randomAccessStream.close();
-            inputFileChannel.close();
-
-            // convert the byte stream to byte array
-            fileContent = fileContentStream.toByteArray();
-        } catch (FileNotFoundException e1) {
-            PrintMessage.e("Open File", String.format("Failed to open file %s because it doesn't exist", filename));
-            return false;
-        } catch (IOException e) {
-            PrintMessage.e("Open File", String.format("An IO error ocurred while reading the file %s", filename));
-            e.printStackTrace();
-            return false;
-        }
+        byte[] fileContent = FileSystemNIO.loadLocalFile(filename);
 
         // request peers in the chord network to store the file
         // attempt to meet the desired replication degree
